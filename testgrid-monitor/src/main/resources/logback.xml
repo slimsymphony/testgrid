@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="600 seconds">
+	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder charset="UTF-8">
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+			</pattern>
+		</encoder>
+	</appender>
+
+	<logger name="service" level="INFO">
+		<appender-ref ref="serviceAppender" />
+	</logger>
+	
+	<logger name="message" level="INFO">
+		<appender-ref ref="messageAppender" />
+	</logger>
+	
+	<logger name="http" level="DEBUG">
+		<appender-ref ref="stdout" />
+	</logger>
+
+	<appender name="serviceAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>logs/service.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- daily roll over -->
+			<fileNamePattern>logs/service.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<!-- keep 14 days' worth of history -->
+			<maxHistory>14</maxHistory> 
+		</rollingPolicy>
+		<encoder charset="UTF-8">
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+			</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="messageAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>logs/message.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- daily roll over -->
+			<fileNamePattern>logs/message.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<!-- keep 14 days' worth of history -->
+			<maxHistory>14</maxHistory> 
+		</rollingPolicy>
+		<encoder charset="UTF-8">
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+			</pattern>
+		</encoder>
+	</appender>
+
+	<root level="INFO">
+		<appender-ref ref="stdout" />
+	</root>
+</configuration>

@@ -1,0 +1,24 @@
+[
+	{
+		'className':'frank.incubator.testgrid.agent.plugin.ScreenshotPlugin',
+		'pluginName':'ScreenshotPlugin',
+		'permissions':['ALLOCATE_DEVICE_INFO','FSIO_WORKSPACE','EXECUTE_SCHEDULED_OPERATION','REGISTER_EVENT_NOTIFY'],
+		'scheduleSecs': 60,
+		'events': ['Device'],
+		'attributes':{ 'folderStrategy':'DEVICE_BASED', 'namingPattern':'yyyyMMdd-HHmmss','cleanupExpireScreenshots':'true', 'expireDays':1 }
+	},
+	{
+		'className':'frank.incubator.testgrid.agent.plugin.ProcessCleanerPlugin',
+		'pluginName':'ProcessCleanerPlugin',
+		'permissions':['ALLOCATE_DEVICE_INFO','EXECUTE_SCHEDULED_OPERATION'],
+		'scheduleSecs': 120,
+		'attributes':{}
+	},
+	{
+		'className':'frank.incubator.testgrid.agent.plugin.RfSignalCheckPlugin',
+		'pluginName':'RfSignalCheckPlugin',
+		'permissions':['ALLOCATE_DEVICE_INFO','FSIO_WORKSPACE','EXECUTE_SCHEDULED_OPERATION'],
+		'scheduleSecs': 120,
+		'attributes':{}
+	}
+]

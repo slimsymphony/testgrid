@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.4" xmlns="http://java.sun.com/xml/ns/j2ee"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee 
+	http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
+    <session-config>
+        <session-timeout>600</session-timeout>
+    </session-config>
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+    <servlet>
+        <servlet-name>InitializationServlet</servlet-name>
+        <servlet-class>frank.incubator.testgrid.monitor.InitializationServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+        <init-param>
+            <param-name>mqUri</param-name>
+            <param-value>LocalPilot*tcp://localhost:61617</param-value>
+            <!-- <param-value>Sandbox*tcp://10.220.120.10.com:61617;Production*failover:(tcp://10.220.116.240:61617,tcp://10.220.116.242:61617)</param-value> -->
+        </init-param>
+        <init-param>
+            <param-name>mqUser</param-name>
+            <param-value></param-value>
+        </init-param>
+        <init-param>
+            <param-name>mqPasswd</param-name>
+            <param-value></param-value>
+        </init-param>
+        <init-param>
+            <param-name>svn</param-name>
+            <param-value>/usr/bin/svn</param-value>
+        </init-param>
+        <init-param>
+            <param-name>icaseDir</param-name>
+            <param-value>/home/icase</param-value>
+        </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>InitializationServlet</servlet-name>
+        <url-pattern>/showInitParams</url-pattern>
+    </servlet-mapping>
+</web-app>

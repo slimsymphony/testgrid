@@ -1,0 +1,12 @@
+.project
+.settings/
+target/
+*/.project
+*/.settings/
+*/.classpath
+*/target/
+*/logs/
+*/activemq-data/
+*/*.db
+*/*workspace*/
+*.info

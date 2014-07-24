@@ -1,0 +1,51 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>frank.incubator</groupId>
+	<artifactId>testgrid</artifactId>
+	<version>0.0.3-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<modules>
+		<module>testgrid-common</module>
+		<module>testgrid-agent</module>
+		<module>testgrid-client</module>
+		<module>testgrid-monitor</module>
+	</modules>
+
+	<name>Test Grid</name>
+	<description>Test Grid Infrastructure for in-device mobile Automation testing.</description>
+	<url>https://github.com/slimsymphony/testgrid</url>
+	<developers>
+		<developer>
+			<id>slimsymphony</id>
+			<name>Wang Frank</name>
+			<email>slimsymphony@gmail.com</email>
+		</developer>
+	</developers>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<compileSource>1.7</compileSource>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<optimize>true</optimize>
+					<source>1.7</source>
+					<target>1.7</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<extensions>true</extensions>
+			</plugin>
+		</plugins>
+	</build>
+</project>
