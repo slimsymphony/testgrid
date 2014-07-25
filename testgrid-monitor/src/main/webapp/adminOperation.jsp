@@ -10,14 +10,14 @@
 <%@page import="java.util.Map"%>
 
 <%
-    String type = request.getParameter("type");
+	String type = request.getParameter("type");
     String id = request.getParameter("id");
     String host = request.getParameter("host");
     String details = request.getParameter("details");
     String users = request.getParameter("users");
     String operation = request.getParameter("operation");
     String mqRegionStr = RegionManager.getCurrentRegion();
-    AdminControler adminControler = RegionManager.getControler(mqRegionStr);
+    AdminController adminControler = RegionManager.getControler(mqRegionStr);
     if (StringUtils.isEmpty(operation)){
         operation = "Release";
     }
@@ -81,7 +81,6 @@
     } else {
         responseMsg = "Operation failed due to: " + responseMsg;
     }
-
 %>
 
 <%=responseMsg%>

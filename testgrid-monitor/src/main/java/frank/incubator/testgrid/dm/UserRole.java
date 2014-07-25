@@ -4,10 +4,6 @@
  */
 package frank.incubator.testgrid.dm;
 
-/**
- *
- * @author larryang
- */
 public enum UserRole {
     
     ADMINISTRATOR,

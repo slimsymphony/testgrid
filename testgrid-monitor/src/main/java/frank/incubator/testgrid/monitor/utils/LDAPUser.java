@@ -3,7 +3,6 @@ package frank.incubator.testgrid.monitor.utils;
 /**
  * Data holder for LDAP user information.
  *
- * @author larryang
  */
 public class LDAPUser {
 

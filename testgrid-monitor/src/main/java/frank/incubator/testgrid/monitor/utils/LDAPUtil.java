@@ -1,9 +1,5 @@
 package frank.incubator.testgrid.monitor.utils;
 
-/**
- *
- * @author larryang
- */
 import com.unboundid.ldap.sdk.BindRequest;
 import com.unboundid.ldap.sdk.DereferencePolicy;
 import com.unboundid.ldap.sdk.LDAPConnection;
@@ -22,10 +18,6 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 
 
-/**
- *
- * @author larryang
- */
 public class LDAPUtil extends AbstractLDAPUtil {
 
     private final String DEFAULT_URL = "147.243.4.80";
@@ -115,7 +107,7 @@ public class LDAPUtil extends AbstractLDAPUtil {
             String searchQuery = "(|(uid=" + query + "*)(cn=" + query + "*)(mail=" + query + "*))";
             SearchResult sr;
             try {
-                sr = ldap.search("o=Nokia", SearchScope.SUB, DereferencePolicy.SEARCHING, 10, 60, false,
+                sr = ldap.search("o=Nocic", SearchScope.SUB, DereferencePolicy.SEARCHING, 10, 60, false,
                         searchQuery, searchParams);
             } catch (LDAPSearchException e) {
                 // Only if the size limit has been exceeded

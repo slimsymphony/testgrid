@@ -33,26 +33,6 @@ public class TopicMonitor {
 		@Override
 		protected void handleMessage( Message m ) {
 			MessageHub.printMessage( m, log );
-			/*try {
-				String testId = MessageHub.getProperty( m, Constants.MSG_HEAD_TESTID, "Unknown" );
-				if( testId.equals( "Unknown" ) ) {
-					testId = MessageHub.getProperty( m, Constants.MSG_HEAD_TEST_INFO, "Unknown" );
-					if( !testId.equals( "Unknown" ) ) {
-						Test t = CommonUtils.fromJson( testId, Test.class );
-						if( t != null )
-							testId = t.getId();
-					}
-				}
-				log.info("===========" + testId +"===========");
-				if( this.testId != null && ( testId.equals( "Unknown" ) || testId.equals( this.testId ) ) ) {
-					MessageHub.printMessage( m, log );
-					if( m instanceof TextMessage ) {
-						log.info( ((TextMessage)m).getText() );
-					}
-				}
-			} catch ( Exception e ) {
-				log.error( e.getMessage(), e );
-			}*/
 		}
 	}
 	
@@ -72,8 +52,6 @@ public class TopicMonitor {
 		//MessageHub hub = new MessageHub( "tcp://10.220.120.10:61616", "Monitor" );//,{'id':'BROKER_STATUS','uri':'udp://localhost:45732','mq':'ActiveMQ'},{'id':'BROKER_FT','uri':'nio://localhost:61616','mq':'ActiveMQ'},{'id':'BROKER_NOTIFICATION','uri':'udp://localhost:45732','mq':'ActiveMQ'}
 		BrokerDescriptor[] bd3 = CommonUtils.fromJson( "[{'id':'BROKER_TASK','uri':'nio://localhost:61616','mq':'ActiveMQ'}]", new TypeToken<BrokerDescriptor[]>(){}.getType( ));
 		MessageHub hub = new MessageHub( "Monitor", bd3 );
-		//hub.bindHandlers( "testenv", Topic.class, Constants.HUB_TEST_STATUS, null, new StatusListener("Test_icase-38755", "testenv" ) );
-		//hub.bindHandlers( "officialenv", Topic.class, Constants.HUB_TEST_STATUS, null, new StatusListener( null, "officialenv" ) );
 		hub.bindHandlers( "BROKER_TASK", Topic.class, Constants.HUB_TASK_PUBLISH, null, new StatusListener( null, "BROKER_TASK" ) );
 		while(true) {
 			try {

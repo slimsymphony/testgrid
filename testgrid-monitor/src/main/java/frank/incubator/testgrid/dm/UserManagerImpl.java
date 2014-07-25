@@ -21,10 +21,6 @@ import java.util.Map;
 import javax.sound.midi.MidiDevice.Info;
 import org.apache.commons.lang3.StringUtils;
 
-/**
- *
- * @author larryang
- */
 public class UserManagerImpl implements UserManager {
 
     private LogConnector log;

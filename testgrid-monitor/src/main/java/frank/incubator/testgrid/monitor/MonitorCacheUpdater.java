@@ -8,10 +8,6 @@ import frank.incubator.testgrid.common.log.LogConnector;
 import frank.incubator.testgrid.common.log.LogUtils;
 import java.util.concurrent.TimeUnit;
 
-/**
- * 
- * @author larryang
- */
 public class MonitorCacheUpdater extends Thread {
 
     private LogConnector log;

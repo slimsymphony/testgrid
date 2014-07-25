@@ -7,10 +7,6 @@ package frank.incubator.testgrid.dm;
 import java.util.List;
 import java.util.Map;
 
-/**
- *
- * @author larryang
- */
 public interface UserManager {
     
     void addUser(SysUser user) throws UserManageException;

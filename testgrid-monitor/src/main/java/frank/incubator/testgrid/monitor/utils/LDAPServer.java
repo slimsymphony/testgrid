@@ -7,7 +7,6 @@ package frank.incubator.testgrid.monitor.utils;
  * Presents LDAP server. Includes details for connecting to LDAP.
  *
  * @see LDAPUtil
- * @author larryang
  */
 
 public class LDAPServer{

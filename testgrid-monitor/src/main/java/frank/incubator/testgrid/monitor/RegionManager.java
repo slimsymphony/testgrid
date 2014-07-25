@@ -10,15 +10,11 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 
-/**
- *
- * @author larryang
- */
 public class RegionManager {
     
-    private static List<String> mqRegions = new ArrayList();
-    private static Map<String, MonitorCache> regionCacheMap = new HashMap();
-    private static Map<String, AdminControler> regionControlerMap = new HashMap();
+    private static List<String> mqRegions = new ArrayList<String>();
+    private static Map<String, MonitorCache> regionCacheMap = new HashMap<String,MonitorCache>();
+    private static Map<String, AdminController> regionControlerMap = new HashMap<String,AdminController>();
     private static String currentRegion;
     
     public static List<String> getMQRegions(){
@@ -52,11 +48,11 @@ public class RegionManager {
         }
     }
     
-    public static void addControler(String mqUri, AdminControler adminControler){
+    public static void addControler(String mqUri, AdminController adminControler){
         regionControlerMap.put(mqUri, adminControler);
     }
     
-    public static AdminControler getControler(String mqUri){
+    public static AdminController getControler(String mqUri){
         if (regionControlerMap.containsKey(mqUri)){
             return regionControlerMap.get(mqUri);
         }else{
@@ -74,8 +70,8 @@ public class RegionManager {
     
     public static void triggerLoopbackHeartbeat(){
         
-        for (Map.Entry<String, AdminControler> entry : regionControlerMap.entrySet()){
-            AdminControler adminControler = entry.getValue();
+        for (Map.Entry<String, AdminController> entry : regionControlerMap.entrySet()){
+            AdminController adminControler = entry.getValue();
             adminControler.sendLoopbackHeartbeat();
         }
         
