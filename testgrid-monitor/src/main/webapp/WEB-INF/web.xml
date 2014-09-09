@@ -12,7 +12,6 @@
     <servlet>
         <servlet-name>InitializationServlet</servlet-name>
         <servlet-class>frank.incubator.testgrid.monitor.InitializationServlet</servlet-class>
-        <load-on-startup>1</load-on-startup>
         <init-param>
             <param-name>mqUri</param-name>
             <param-value>LocalPilot*tcp://localhost:61617</param-value>
@@ -34,6 +33,7 @@
             <param-name>icaseDir</param-name>
             <param-value>/home/icase</param-value>
         </init-param>
+        <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>
         <servlet-name>InitializationServlet</servlet-name>
