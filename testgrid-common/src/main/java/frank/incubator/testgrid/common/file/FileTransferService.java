@@ -85,7 +85,7 @@ public class FileTransferService extends MessageListenerAdapter {
 		
 		for( String ftTaskId : incomingTasks.keySet() ) {
 			Map<String,Object> taskI = incomingTasks.get( ftTaskId );
-			long start = (long)taskI.get( Constants.MSG_HEAD_TIMESTAMP );
+			long start = (Long)taskI.get( Constants.MSG_HEAD_TIMESTAMP );
 			if( current - start > timeout ) {
 				log.warn( "Receiving FTTask[" + ftTaskId+"] suspected OoS, and exceed the max timeout, will be stopped." );
 				retry( taskI );

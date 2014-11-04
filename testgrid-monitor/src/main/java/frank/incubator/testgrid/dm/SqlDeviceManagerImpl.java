@@ -219,7 +219,7 @@ public class SqlDeviceManagerImpl implements DeviceManager {
 			if( val == null || val instanceof String ) {
 				ps.setString( counter++, (String)val );
 			}else if( val instanceof Integer) {
-				ps.setInt( counter++, (int)val );
+				ps.setInt( counter++, (Integer)val );
 			}
 		}
 	}

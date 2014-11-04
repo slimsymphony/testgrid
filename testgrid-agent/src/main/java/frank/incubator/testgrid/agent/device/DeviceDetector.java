@@ -33,7 +33,7 @@ public abstract class DeviceDetector extends Thread {
 		this.setName( "DeviceDetector" );
 		DeviceConfigFileWatcher dcfw;
 		try {
-			dcfw = new DeviceConfigFileWatcher( workspace.toPath(), this, "properties" );
+			dcfw = new DeviceConfigFileWatcher( workspace, this, "properties" );
 			dcfw.start();
 		} catch ( IOException e ) {
 			log.error( "Start Device Config file watcher failed.", e );

@@ -1,12 +1,10 @@
 package frank.incubator.testgrid.agent.device;
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchEvent.Kind;
 
 import frank.incubator.testgrid.common.file.FileWatchService;
+import frank.incubator.testgrid.common.file.WatchEvent;
 
 /**
  * Device Configuration File watch service. Which trigger a device refresh when
@@ -20,20 +18,28 @@ public class DeviceConfigFileWatcher extends FileWatchService {
 	private DeviceDetector deviceDetector;
 	private String fileExtension;
 
-	public DeviceConfigFileWatcher( Path dir, DeviceDetector dd, String fileExtension ) throws IOException {
-		super( dir, false );
+	public DeviceConfigFileWatcher(File dir, DeviceDetector dd,
+			String fileExtension) throws IOException {
+		super(dir, false);
 		this.fileExtension = fileExtension;
 		deviceDetector = dd;
 	}
 
 	@Override
-	public void handleEvent( WatchEvent<Path> event, Path path ) {
-		Kind<Path> kind = event.kind();
-		if ( fileExtension == null || fileExtension.trim().isEmpty() || fileExtension.equals( "*" ) || path.getFileName().toString().toLowerCase().endsWith( fileExtension ) ) {
-			if ( kind == StandardWatchEventKinds.ENTRY_MODIFY || kind == StandardWatchEventKinds.ENTRY_DELETE ) {
+	public void handleEvent(WatchEvent event, File path) {
+		if (fileExtension == null
+				|| fileExtension.trim().isEmpty()
+				|| fileExtension.equals("*")
+				|| path.getName().toString().toLowerCase()
+						.endsWith(fileExtension)) {
+			switch (event) {
+			case UPDATED:
+			case DELETED:
 				deviceDetector.refresh();
+				break;
+			case CREATED:
+				log.info("File["+path.getAbsolutePath()+"] was created.");
 			}
 		}
 	}
-
 }

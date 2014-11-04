@@ -3,7 +3,6 @@ package frank.incubator.testgrid.client;
 import java.io.File;
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +46,7 @@ public class TestClient {
 			bds = CommonUtils.fromJson( sw.toString(), new TypeToken<BrokerDescriptor[]>(){}.getType() );
 			FileTransferDescriptor descriptor = CommonUtils.fromJson( "{'channels':[{'priority':0,'id':'SOCKET'},{'priority':3,'properties':{'port':21,'pwd':'ftp','host':'10.220.120.16','user':'ftp'},'id':'FTP'}]}", FileTransferDescriptor.class );
 			//TaskClient client = new TaskClient( null, task, TestStrategy.EXEC_ASAP, Paths.get( "client_workspace" ).toFile(), System.out, descriptor, false , bds );
-			TaskClient client = new TaskClient( "tcp://localhost:61617", task, TestStrategy.EXEC_ASAP, Paths.get( "client_workspace" ).toFile(), System.out, descriptor, false , bds );
+			TaskClient client = new TaskClient( "tcp://localhost:61617", task, TestStrategy.EXEC_ASAP, new File( "client_workspace" ), System.out, descriptor, false , bds );
 			client.begin();
 			while( !client.isFinished() ) {
 				System.out.println("Still waiting for task finished.");

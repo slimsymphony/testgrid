@@ -164,23 +164,17 @@ public final class CommonUtils {
 				long lastUpdated = System.currentTimeMillis();
 				if( jo.has( "lastUpdated" ) )
 					lastUpdated = jo.get( "lastUpdated" ).getAsLong();
-				switch( id ) {
-					case "SOCKET":
+					if( id.equals("SOCKET"))
 						ftc = new DirectSocketFTChannel();
-						break;
-					case "FTP":
+					else if( id.equals("FTP"))
 						ftc = new FtpFTChannel();
-						break;
-					case "HTTPGET":
+					else if( id.equals("HTTPGET"))
 						ftc = new HttpGetFTChannel();
-						break;
-					case "HTTPPUT":
+					else if( id.equals("HTTPPUT"))
 						ftc = new HttpPutFTChannel();
-						break;
-					case "NFS":
+					else if( id.equals("NFS"))
 						ftc = new NfsFTChannel();
-						break;
-				}
+						
 				if( ftc != null ) {
 					ftc.setLastUpdated( lastUpdated );
 					if( priority != 100 )
@@ -792,29 +786,36 @@ public final class CommonUtils {
 			status.put( "process", sb.toString().trim() );
 		} else { // linux?
 			StringBuffer sb = new StringBuffer();
-			CommonUtils.execBlocking( "cat /proc/cpuinfo", null, sb, 3000L ); // |grep
-																				// -i
-																				// \"processor\"|wc
-																				// -l
-			sb.append( "\n" );
-			CommonUtils.execBlocking( "vmstat |tail -n 1|awk '{print $15}'", null, sb, 3000L ); // idle
-																								// ratio
-			status.put( "cpu", sb.toString().trim() );
-			sb = new StringBuffer();
-			CommonUtils.execBlocking( "df -h", null, sb, 3000L );
-			status.put( "disk", sb.toString().trim() );
-			sb = new StringBuffer();
-			CommonUtils.execBlocking( "top -n 1|grep \"Mem\"", null, sb, 3000L );
-			status.put( "memory", sb.toString().trim() );
-			sb = new StringBuffer();
-			CommonUtils.execBlocking( "netstat -tulnp", null, sb, 3000L );
-			status.put( "network", sb.toString().trim() );
-			sb = new StringBuffer();
-			CommonUtils.execBlocking( "uname -a", null, sb, 3000L );
-			status.put( "os", sb.toString().trim() );
-			sb = new StringBuffer();
-			CommonUtils.execBlocking( "ps -ef", null, sb, 3000L );
-			status.put( "process", sb.toString().trim() );
+			try {
+				CommonUtils.execBlocking( "cat /proc/cpuinfo", null, sb, 3000L ); // |grep
+																					// -i
+																					// \"processor\"|wc
+																					// -l
+				sb.append( "\n" );
+				try {
+					CommonUtils.execBlocking( "vmstat |tail -n 1|awk '{print $15}'", null, sb, 3000L ); // idle
+				}catch(Exception ex) {																				// ratio
+					ex.printStackTrace();
+				}
+				status.put( "cpu", sb.toString().trim() );
+				sb = new StringBuffer();
+				CommonUtils.execBlocking( "df -h", null, sb, 3000L );
+				status.put( "disk", sb.toString().trim() );
+				sb = new StringBuffer();
+				CommonUtils.execBlocking( "top -n 1|grep Mem", null, sb, 3000L );
+				status.put( "memory", sb.toString().trim() );
+				sb = new StringBuffer();
+				CommonUtils.execBlocking( "netstat -tulnp", null, sb, 3000L );
+				status.put( "network", sb.toString().trim() );
+				sb = new StringBuffer();
+				CommonUtils.execBlocking( "uname -a", null, sb, 3000L );
+				status.put( "os", sb.toString().trim() );
+				sb = new StringBuffer();
+				CommonUtils.execBlocking( "ps -ef", null, sb, 3000L );
+				status.put( "process", sb.toString().trim() );
+			}catch(IOException ex) {
+				throw new IOException("Exec blocking failed.Current output:" + sb.toString(), ex);
+			}
 		}
 		return status;
 	}
@@ -1422,7 +1423,6 @@ public final class CommonUtils {
 		return ret;
 	}
 
-	@SuppressWarnings( "resource" )
 	public static InputStream loadResources( String filename, boolean externalFirst ) {
 		InputStream in = null;
 		File f = new File( System.getProperty( "user.dir" ), filename );

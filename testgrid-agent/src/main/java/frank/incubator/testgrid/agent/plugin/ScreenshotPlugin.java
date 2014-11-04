@@ -93,7 +93,7 @@ public class ScreenshotPlugin extends AbstractAgentPlugin<File> {
 								.append( " pull /sdcard/" ).append( filename ).append( " && " ).append( adb() )
 								.append( " -s " ).append( sn ).append( " shell rm /sdcard/" ).append( filename );
 						} else {
-							sb.append( adb() ).append( " shell screencap -p | sed 's/\r$//' > " ).append( filename );
+							sb.append( adb() ).append( " -s " ).append( sn ).append( " shell screencap -p | sed 's/\r$//' > " ).append( filename );
 						}
 						try {
 							CommonUtils.exec( sb.toString(), folder.getAbsolutePath() );
@@ -124,7 +124,7 @@ public class ScreenshotPlugin extends AbstractAgentPlugin<File> {
 								.append( " pull /sdcard/" ).append( filename ).append( " && " ).append( adb() )
 								.append( " -s " ).append( sn ).append( " shell rm /sdcard/" ).append( filename );
 						} else {
-							sb.append( adb() ).append( " shell screencap -p | sed 's/\r$//' > " ).append( filename );
+							sb.append( adb() ).append( " -s " ).append( sn ).append( " shell screencap -p | sed 's/\r$//' > " ).append( filename );
 						}
 						try {
 							CommonUtils.exec( sb.toString(), folder.getAbsolutePath() );

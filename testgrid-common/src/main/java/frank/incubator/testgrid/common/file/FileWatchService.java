@@ -1,59 +1,45 @@
 package frank.incubator.testgrid.common.file;
 
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
-import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
-
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchEvent.Kind;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import frank.incubator.testgrid.common.log.LogConnector;
 import frank.incubator.testgrid.common.log.LogUtils;
 
 /**
- * A File change event watcher service. 
- * The child class should implement the {@link handleEvent} Method to handle different {@link java.nio.file.StandardWatchEventKinds} events.
+ * A File change event watcher service. The child class should implement the
+ * {@link handleEvent} Method to handle different
+ * {@link java.nio.file.StandardWatchEventKinds} events.
+ * 
  * @author Wang Frank
  *
- */ 
+ */
 public abstract class FileWatchService extends Thread {
 
-	private final WatchService watcher;
-	private final Map<WatchKey, Path> keys;
 	protected final boolean recursive;
-	private boolean trace = false;
-	@SuppressWarnings( "unused" )
-	private Path rootDir, tmp = null;
+	@SuppressWarnings("unused")
+	private File rootDir, tmp = null;
 	protected LogConnector log;
+	Map<String, Long> fileMonitor = new ConcurrentHashMap<String, Long>();
 
-	public FileWatchService( Path dir, boolean recursive ) throws IOException {
-		this.setName( "FileWatchService" );
+	public FileWatchService(File dir, boolean recursive) throws IOException {
+		this.setName("FileWatchService");
 		this.rootDir = dir;
-		this.watcher = FileSystems.getDefault().newWatchService();
-		this.keys = new HashMap<WatchKey, Path>();
 		this.recursive = recursive;
-		this.log = LogUtils.get( "FileWatchService" );
-
-		if ( recursive ) {
-			log.debug( "Scanning " + dir + " ...\n" );
-			registerAll( dir );
-			log.debug( "Done." );
-		} else {
-			register( dir );
+		this.log = LogUtils.get("FileWatchService");
+		if (rootDir.exists()) {
+			if (rootDir.isFile()) {
+				fileMonitor.put(rootDir.getName(), rootDir.lastModified());
+			} else if (rootDir.isDirectory()) {
+				for (File f : rootDir.listFiles()) {
+					fileMonitor.put(f.getName(), f.lastModified());
+				}
+			}
 		}
-		this.trace = true;
 	}
 
 	/**
@@ -62,84 +48,46 @@ public abstract class FileWatchService extends Thread {
 	 * @param event
 	 * @param path
 	 */
-	public abstract void handleEvent( WatchEvent<Path> event, Path path );
-	
-	private void register( Path dir ) throws IOException {
-		WatchKey key = dir.register( watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY );
-		if ( trace ) {
-			Path existing = keys.get( key );
-			if ( existing == null ) {
-				log.debug( "register: " + dir + "\n" );
-			} else {
-				if ( !dir.equals( existing ) ) {
-					log.debug( "update: " + existing + " -> " + dir + "\n" );
-				}
-			}
-		}
-		keys.put( key, dir );
-	}
-
-	private void registerAll( final Path start ) throws IOException {
-
-		Files.walkFileTree( start, new SimpleFileVisitor<Path>() {
-			@Override
-			public FileVisitResult preVisitDirectory( Path dir, BasicFileAttributes attrs ) throws IOException {
-				register( dir );
-				return FileVisitResult.CONTINUE;
-			}
-		} );
-	}
-
-	void processEvents() {
-		for ( ;; ) {
-			WatchKey key;
-			try {
-				key = watcher.take();
-			} catch ( InterruptedException x ) {
-				return;
-			}
-			Path path = keys.get( key );
-			if ( path == null ) {
-				continue;
-			}
-			for ( WatchEvent<?> event : key.pollEvents() ) {
-				Kind<?> kind = event.kind();
-				if ( kind == OVERFLOW ) {
-					continue;
-				}
-				WatchEvent<Path> evt = cast( event );
-				Path name = evt.context();
-				Path child = path.resolve( name );
-				log.info( child + " trigger event:" + event.kind().name() );
-				handleEvent( evt, child );
-				/*
-				log.info( child + " trigger event:" + event.kind().name() );
-				if ( recursive && ( kind == ENTRY_CREATE ) ) {
-					try {
-						if ( Files.isDirectory( child, NOFOLLOW_LINKS ) ) {
-							registerAll( child );
-						}
-					} catch ( IOException x ) {
-					}
-				}*/
-			}
-			boolean valid = key.reset();
-			if ( !valid ) {
-				keys.remove( key );
-				if ( keys.isEmpty() ) {
-					break;
-				}
-			}
-		}
-	}
-
-	@SuppressWarnings( "unchecked" )
-	static <T> WatchEvent<T> cast( WatchEvent<?> event ) {
-		return ( WatchEvent<T> ) event;
-	}
+	public abstract void handleEvent(WatchEvent event, File path);
 
 	@Override
 	public void run() {
-		processEvents();
+
+		while (true) {
+			if (rootDir.exists()) {
+				if (rootDir.isFile()) {
+					if(rootDir.lastModified() != fileMonitor.get(rootDir.getName())) {
+						handleEvent(WatchEvent.UPDATED, rootDir);
+						fileMonitor.put(rootDir.getName(), rootDir.lastModified());
+					}
+				} else if (rootDir.isDirectory()) {
+					for (File f : rootDir.listFiles()) {
+						if(!fileMonitor.containsKey(f.getName())) {
+							fileMonitor.put(f.getName(), f.lastModified());
+							handleEvent(WatchEvent.CREATED, f);
+						}else if(f.lastModified() != fileMonitor.get(f.getName())) {
+							fileMonitor.put(f.getName(), f.lastModified());
+							handleEvent(WatchEvent.UPDATED, f);
+						}
+					}
+					File f = null;
+					List<String> dds = new ArrayList<String>();
+					for(String name : fileMonitor.keySet()) {
+						f = new File(rootDir, name);
+						if(!f.exists()) {
+							handleEvent(WatchEvent.DELETED, f);
+							dds.add(name);
+						}
+					}
+					for(String name: dds) {
+						fileMonitor.remove(name);
+					}
+				}
+			} else {
+				handleEvent(WatchEvent.DELETED, rootDir);
+				fileMonitor.remove(rootDir.getName());
+			}
+
+		}
 	}
 }

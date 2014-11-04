@@ -5,7 +5,7 @@ import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.LoggerFactory;
+//import org.slf4j.LoggerFactory;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
@@ -32,7 +32,7 @@ public class LogUtils {
 	final public static LogConnector.NullOutputSteam no = new LogConnector.NullOutputSteam();
 	private static Map<String, Logger> loggers = new ConcurrentHashMap<String, Logger>();
 	
-	private static LogConnector commonlog = new LogConnector( LoggerFactory.getLogger( "root" ) );
+	private static LogConnector commonlog = new LogConnector( System.out, LogLevel.DEBUG );;
 	
 	private static LoggerContext context = new LoggerContext();
 	

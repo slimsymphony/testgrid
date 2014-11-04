@@ -16,7 +16,7 @@
             LDAPUser ldapUser = null;
             
             try {
-                LDAPServer ldapServer = new LDAPServer("147.243.4.80", 636, "cn=mpcisvc01,ou=systemusers,ou=accounts", "w%5]5sf6bVh2U)H%");
+                LDAPServer ldapServer = new LDAPServer("127.0.0.1", 636, "cn=mpcisvc01,ou=systemusers,ou=accounts", "w%5]5sf6bVh2U)H%");
                 LDAPUtil ldapUtil = new LDAPUtil(ldapServer);
                 ldapUser = ldapUtil.authenticate(username, password);
             } catch (Exception e){
