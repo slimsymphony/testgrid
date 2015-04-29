@@ -1,15 +1,16 @@
-<%@page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
+<%@page language="java" contentType="text/html; charset=utf-8"
+	pageEncoding="utf-8"%>
 <%@page import="frank.incubator.testgrid.monitor.utils.*"%>
 <%@page import="frank.incubator.testgrid.dm.*"%>
 <%@page import="java.util.List"%>
 <%@page import="java.util.HashMap"%>
 <html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>Login Authentication</title>
-    </head>
-    <body>
-        <%
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Login Authentication</title>
+</head>
+<body>
+	<%
             String username=request.getParameter("username");
             String password=request.getParameter("password");
             
@@ -47,5 +48,5 @@
             	response.sendRedirect("index.jsp");
             }
         %>
-    </body>
+</body>
 </html>

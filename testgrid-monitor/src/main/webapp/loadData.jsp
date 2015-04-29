@@ -1,6 +1,7 @@
 <%@page import="org.apache.commons.lang3.StringUtils"%>
 <%@page import="java.util.Arrays"%>
-<%@page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
+<%@page language="java" contentType="text/html; charset=utf-8"
+	pageEncoding="utf-8"%>
 <%@page import="frank.incubator.testgrid.monitor.*"%>
 <%@page import="frank.incubator.testgrid.dm.*"%>
 <%@page import="frank.incubator.testgrid.common.model.*"%>
@@ -105,7 +106,7 @@
             for (Device device : agent.getDevices()) {
                 JSONObject deviceJson = new JSONObject();
                 deviceJson.put("id", nodeCounter + 2 + deviceCounter);
-                deviceJson.put("name", device.getAttribte("sn"));
+                deviceJson.put("name", device.getAttribute("sn"));
                 deviceJson.put("status", device.getStateString());
                 deviceJson.put("details", device.toString());
                 deviceJson.put("nodetype", "device");
@@ -165,15 +166,15 @@
             //Add agent node
             JSONObject deviceJson = new JSONObject();
             deviceJson.put("id", recordCounter);
-            deviceJson.put("name", device.getAttribte("sn"));
+            deviceJson.put("name", device.getAttribute("sn"));
             deviceJson.put("nodetype", "device");
-            deviceJson.put("imei", device.getAttribte("imei"));
-            deviceJson.put("tag", device.getAttribte("tag"));
-            deviceJson.put("productcode", device.getAttribte("productcode"));
-            deviceJson.put("productname", device.getAttribte("productname"));
-            deviceJson.put("rmcode", device.getAttribte("rmcode"));
-            deviceJson.put("hw", device.getAttribte("hw"));
-            deviceJson.put("sn", device.getAttribte("sn"));
+            deviceJson.put("imei", device.getAttribute("imei"));
+            deviceJson.put("tag", device.getAttribute("tag"));
+            deviceJson.put("productcode", device.getAttribute("productcode"));
+            deviceJson.put("productname", device.getAttribute("productname"));
+            deviceJson.put("rmcode", device.getAttribute("rmcode"));
+            deviceJson.put("hw", device.getAttribute("hw"));
+            deviceJson.put("sn", device.getAttribute("sn"));
             deviceJson.put("status", device.getStateString());
             deviceJson.put("loadedtask", device.getTaskStatus());
             deviceJson.put("hangtime", device.calcTimeNotUpdatedTillNow());

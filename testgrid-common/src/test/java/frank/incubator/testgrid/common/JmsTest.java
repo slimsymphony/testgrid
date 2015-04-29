@@ -87,10 +87,11 @@ public class JmsTest {
 		String json = "[{'id':'localTcp','uri':'tcp://localhost:61616','mq':'ActiveMQ'},{'id':'localUdp','uri':'udp://localhost:45732','mq':'ActiveMQ'}]";
 		BrokerDescriptor[] bds = CommonUtils.fromJson( json, new TypeToken<BrokerDescriptor[]>() {}.getType() );
 		MessageHub mh = new MessageHub( "Test", bds );
-		Pipe pt1 = mh.bindHandlers( "localTcp", Queue.class, "testqueue", null, new SimpleMessageListener(1,mh.getBroker( "localTcp" )), (OutputStream) null );
-		Pipe pt2 = mh.bindHandlers( "localTcp", Queue.class, "testqueue", null, new SimpleMessageListener(2,mh.getBroker( "localTcp" )), (OutputStream) null);
-		Pipe pu1 = mh.bindHandlers( "localUdp", Queue.class, "testqueue2", "receiver='bbb'", new SimpleMessageListener(3,mh.getBroker( "localUdp" )), (OutputStream) null );
-		Pipe pu2 = mh.bindHandlers( "localUdp", Queue.class, "testqueue2", "receiver='aaa'", new SimpleMessageListener(4,mh.getBroker( "localUdp" )), (OutputStream) null);
+		mh.bindHandlers( "localTcp", Queue.class, "testqueue", null, new SimpleMessageListener(1,mh.getBroker( "localTcp" )), (OutputStream) null );
+		mh.bindHandlers( "localTcp", Queue.class, "testqueue", null, new SimpleMessageListener(2,mh.getBroker( "localTcp" )), (OutputStream) null);
+		mh.bindHandlers( "localUdp", Queue.class, "testqueue2", "receiver='bbb'", new SimpleMessageListener(3,mh.getBroker( "localUdp" )), (OutputStream) null );
+		mh.bindHandlers( "localUdp", Queue.class, "testqueue2", "receiver='aaa'", new SimpleMessageListener(4,mh.getBroker( "localUdp" )), (OutputStream) null);
+		Pipe pt1 = mh.getPipe("testqueue");
 		Message msg = pt1.createMessage();
 		setProperty( msg, "receiver", "aaa" );
 		msg.setJMSReplyTo( pt1.getDest() );

@@ -1,9 +1,7 @@
 package frank.incubator.testgrid.common.file;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collection;
 import java.util.Map;
@@ -19,49 +17,25 @@ public class DirectSocketFTChannel extends FileTransferChannel {
 
 	public DirectSocketFTChannel() {
 		this.id = "SOCKET";
-		this.setPriority( 0 );
-		this.getProperties().put( "host", CommonUtils.getHostName() );
+		this.setPriority(0);
+		this.getProperties().put("host", CommonUtils.getHostName());
 	}
 
-	transient protected ServerSocket ss;
+	transient private DirectSocketTransferSource dts;
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * frank.incubator.testgrid.common.file.FileTransferChannel#validate()
+	 * @see frank.incubator.testgrid.common.file.FileTransferChannel#validate()
 	 */
 	@Override
-	public boolean validate() {
-		Socket socket = null;
-		try {
-			int servicePort;
-			int failCnt = 0;
-			if( ! this.getProperties().containsKey( "host" ) ) {
-				this.getProperties().put( "host", CommonUtils.getHostName() );
-			}
-			if ( !this.getProperties().containsKey( "servicePort" ) ) {
-				while ( true ) {
-					servicePort = CommonUtils.availablePort( 10000 );
-					try {
-						ss = new ServerSocket( servicePort );
-						this.getProperties().put( "servicePort", servicePort );
-						break;
-					} catch ( IOException e ) {
-						failCnt++;
-						e.printStackTrace();
-						if ( failCnt == 10 )
-							return false;
-					}
-				}
-			}
-			socket = new Socket();
-			socket.connect( new InetSocketAddress( this.getProperty( "host", "localhost" ), this.getProperty( "servicePort", Integer.class ) ) );
-		} catch ( Exception ex ) {
-			return false;
-		} finally {
-			CommonUtils.closeQuietly( socket );
-		}
+	public synchronized boolean validate(LogConnector log) {
+		int servicePort = CommonUtils.availablePort(10000);
+		dts = new DirectSocketTransferSource(null, servicePort, null);
+		dts.start();
+		this.setProperty("servicePort", servicePort);
+		if(log != null)
+			log.info("Begin to start service Port:{}", servicePort);
 		return true;
 	}
 
@@ -71,35 +45,28 @@ public class DirectSocketFTChannel extends FileTransferChannel {
 	 * @see frank.incubator.testgrid.common.file.FileTransferChannel#apply()
 	 */
 	@Override
-	public boolean apply() {
+	public boolean apply(LogConnector log) {
 		Socket socket = null;
 		try {
-			int servicePort;
-			int failCnt = 0;
-			if( ! this.getProperties().containsKey( "host" ) ) {
-				this.getProperties().put( "host", CommonUtils.getHostName() );
+			if (!this.getProperties().containsKey("host")) {
+				if(log != null)
+					log.info("Properties missing Host info.");
+				this.getProperties().put("host", CommonUtils.getHostName());
 			}
-			if ( !this.getProperties().containsKey( "servicePort" ) ) {
-				while ( true ) {
-					servicePort = CommonUtils.availablePort( 10000 );
-					try {
-						ss = new ServerSocket( servicePort );
-						this.getProperties().put( "servicePort", servicePort );
-						break;
-					} catch ( IOException e ) {
-						failCnt++;
-						e.printStackTrace();
-						if ( failCnt == 10 )
-							return false;
-					}
-				}
+			if (!this.getProperties().containsKey("servicePort")) {
+				if(log != null)
+					log.info("Properties missing servicePort");
+				return false;
 			}
 			socket = new Socket();
-			socket.connect( new InetSocketAddress( this.getProperty( "host", "localhost" ), this.getProperty( "servicePort", Integer.class ) ) );
-		} catch ( Exception ex ) {
+			socket.connect(new InetSocketAddress(this.getProperty("host", "localhost"), this.getProperty("servicePort",
+					Integer.class)));
+			if(log != null)
+				log.info("success Apply Socket channel from {} to {}:{}", CommonUtils.getHostName(), this.getProperty("host", "localhost"),this.getProperty("servicePort",Integer.class));
+		} catch (Exception ex) {
 			return false;
 		} finally {
-			CommonUtils.closeQuietly( socket );
+			CommonUtils.closeQuietly(socket);
 		}
 		return true;
 	}
@@ -107,19 +74,22 @@ public class DirectSocketFTChannel extends FileTransferChannel {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * frank.incubator.testgrid.common.file.FileTransferChannel#send(java.
+	 * @see frank.incubator.testgrid.common.file.FileTransferChannel#send(java.
 	 * lang.String, java.util.Collection,
 	 * frank.incubator.testgrid.common.log.LogConnector)
 	 */
 	@Override
-	public boolean send( String token, Collection<File> fileList, LogConnector log ) {
-		CommonUtils.closeQuietly( ss );
-		DirectSocketTransferSource dts = new DirectSocketTransferSource( null, this.getProperty( "servicePort", Integer.class ), log.getOs() );
+	public boolean send(String token, Collection<File> fileList, LogConnector log) {
+		if (dts == null) {
+			if(log != null)
+				log.error("DirectSocketTransferSource is NULL, can't continue sending files.");
+			return false;
+		}
 		try {
-			dts.publish( token, fileList );
-		} catch ( Exception e ) {
-			log.error( "Send Files via DirectSocket failed. Token=" + token, e );
+			dts.publish(token, fileList);
+		} catch (Exception e) {
+			if(log != null)
+				log.error("Send Files via DirectSocket failed. Token=" + token, e);
 			return false;
 		}
 		return true;
@@ -134,16 +104,23 @@ public class DirectSocketFTChannel extends FileTransferChannel {
 	 * frank.incubator.testgrid.common.log.LogConnector)
 	 */
 	@Override
-	public boolean receive( String token, Map<String, Long> fileList, File localDestDir, LogConnector log ) {
-		CommonUtils.closeQuietly( ss );
-		DirectSocketTransferTarget dtt = new DirectSocketTransferTarget( this.getProperty( "host", String.class ), this.getProperty( "servicePort", Integer.class ), log.getOs() );
+	public boolean receive(String token, Map<String, Long> fileList, File localDestDir, LogConnector log) {
+		DirectSocketTransferTarget dtt = new DirectSocketTransferTarget(this.getProperty("host", String.class),
+				this.getProperty("servicePort", Integer.class), log.getOs());
 		try {
-			dtt.fetch( token, fileList, localDestDir );
-		} catch ( Exception e ) {
-			log.error( "Receiving files via DirectSocket failed.Token=" + token, e );
+			dtt.fetch(token, fileList, localDestDir);
+		} catch (Exception e) {
+			if(log != null)
+				log.error("Receiving files via DirectSocket failed.Token=" + token, e);
 			return false;
 		}
 		return true;
+	}
+
+	@Override
+	public void dispose() {
+		if (this.dts != null)
+			dts.dispose();
 	}
 
 }

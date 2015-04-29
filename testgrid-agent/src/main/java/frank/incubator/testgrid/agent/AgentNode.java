@@ -3,12 +3,12 @@ package frank.incubator.testgrid.agent;
 import static frank.incubator.testgrid.common.Constants.HUB_AGENT_STATUS;
 import static frank.incubator.testgrid.common.Constants.HUB_TASK_COMMUNICATION;
 import static frank.incubator.testgrid.common.Constants.HUB_TASK_PUBLISH;
-import static frank.incubator.testgrid.common.Constants.HUB_TASK_STATUS;
 import static frank.incubator.testgrid.common.message.MessageHub.setProperty;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,14 +34,15 @@ import org.apache.commons.io.IOUtils;
 
 import com.google.common.eventbus.EventBus;
 import com.google.gson.reflect.TypeToken;
+
 import frank.incubator.testgrid.agent.device.AndroidDeviceDetector;
 import frank.incubator.testgrid.agent.device.DeviceDetector;
 import frank.incubator.testgrid.agent.device.DeviceManager;
+import frank.incubator.testgrid.agent.device.IosDeviceDetector;
 import frank.incubator.testgrid.agent.message.InfoUpdater;
 import frank.incubator.testgrid.agent.message.NotificationHandler;
 import frank.incubator.testgrid.agent.message.TaskCommunicator;
 import frank.incubator.testgrid.agent.message.TaskSubscriber;
-import frank.incubator.testgrid.agent.message.WaitTaskNotifier;
 import frank.incubator.testgrid.agent.plugin.PluginManager;
 import frank.incubator.testgrid.common.CommonUtils;
 import frank.incubator.testgrid.common.Constants;
@@ -84,7 +85,9 @@ public final class AgentNode extends Thread {
 
 	private DeviceManager dm;
 
-	private DeviceDetector dd;
+	private DeviceDetector androidDetector;
+	
+	private DeviceDetector iosDetector;
 
 	private boolean isRunning;
 
@@ -93,27 +96,27 @@ public final class AgentNode extends Thread {
 	private Map<Test, Long> reservedTests = new ConcurrentHashMap<Test, Long>();
 
 	private Map<Test, Collection<Device>> reservedDevices = new ConcurrentHashMap<Test, Collection<Device>>();
-	
+
 	private Map<String, String> backupWorkspace = new ConcurrentHashMap<String, String>();
 
 	private ExecutorService pool = Executors.newCachedThreadPool();
-	
-	private ScheduledExecutorService pluginPool = Executors.newScheduledThreadPool( 2 );
+
+	private ScheduledExecutorService pluginPool = Executors.newScheduledThreadPool(2);
 
 	private InfoUpdater taskUpdater;
 
 	private EventBus taskStatusEventBus;
 
 	private EventBus deviceBusyEventBus;
-	
+
 	private StatusChangeNotifier notifier;
-	
+
 	private boolean maintainMode;
-	
+
 	private HttpServer httpService;
-	
+
 	private FileTransferDescriptor ftDescriptor;
-	
+
 	private FileTransferService fts;
 
 	/**
@@ -122,20 +125,20 @@ public final class AgentNode extends Thread {
 	 */
 	private Map<Test, TestExecutor> runningTests = new ConcurrentHashMap<Test, TestExecutor>();
 
-	public AgentNode( String uri ) {
-		this.setName( "AgentNode" );
-		log = LogUtils.get( "AgentNode" );
-		log.info( "EventBus Loaded..." );
+	public AgentNode(String uri) {
+		this.setName("AgentNode");
+		log = LogUtils.get("AgentNode");
+		log.info("EventBus Loaded...");
 		taskStatusEventBus = new EventBus();
 		deviceBusyEventBus = new EventBus();
-		log.info( "Configuration Loaded..." );
+		log.info("Configuration Loaded...");
 		loadConfigFromFile();
-		log.info( "Workspace initialzing..." );
-		workspace = new File( System.getProperty( "user.dir" ), Constants.DEFAULT_WORKSPACE_NAME );
-		if ( workspace.exists() ) {
-			if ( CommonUtils.parseBoolean( ( String ) getConfig( Constants.AGENT_CONFIG_DUP_WORKSPACE_BACKUP ) ) ) {
-				workspace.renameTo( new File( workspace.getName() + "_" + System.currentTimeMillis() ) );
-				workspace = new File( Constants.DEFAULT_WORKSPACE_NAME );
+		log.info("Workspace initialzing...");
+		workspace = new File(System.getProperty("user.dir"), Constants.DEFAULT_WORKSPACE_NAME);
+		if (workspace.exists()) {
+			if (CommonUtils.parseBoolean((String) getConfig(Constants.AGENT_CONFIG_DUP_WORKSPACE_BACKUP))) {
+				workspace.renameTo(new File(workspace.getName() + "_" + System.currentTimeMillis()));
+				workspace = new File(Constants.DEFAULT_WORKSPACE_NAME);
 			} else {
 				workspace.delete();
 			}
@@ -143,70 +146,88 @@ public final class AgentNode extends Thread {
 		} else {
 			workspace.mkdirs();
 		}
-		fts = new FileTransferService( hub, ftDescriptor, workspace );
-		log.info( "Message hub initialzing..." );
+		fts = new FileTransferService(hub, ftDescriptor, workspace);
+		log.info("Message hub initialzing...");
 		try {
-			initMessageHub( uri );
-		} catch ( MessageException e ) {
-			throw new RuntimeException( e );
+			initMessageHub(uri);
+		} catch (MessageException e) {
+			throw new RuntimeException(e);
+		}
+
+		log.info("DeviceDetector start working...");
+		notifier = new StatusChangeNotifier(hub, Constants.MSG_TARGET_AGENT);
+		dm = new DeviceManager(Constants.ONE_MINUTE * 5, notifier);
+		long scanInterval = CommonUtils.parseLong((String)getConfig(Constants.AGENT_CONFIG_DEVICE_DETECT_INTERVAL), Constants.ONE_MINUTE);
+		if(CommonUtils.getOsType().equals(Constants.OS_MAC)) {
+			iosDetector = new IosDeviceDetector(workspace, dm, scanInterval);
+			iosDetector.start();
+			if(!CommonUtils.parseBoolean((String) getConfig(Constants.AGENT_CONFIG_DISABLE_ANDROID_DETECTOR),false)) {
+				androidDetector = new AndroidDeviceDetector(workspace, dm, scanInterval);
+				androidDetector.start();
+			}
+		}else {
+			androidDetector = new AndroidDeviceDetector(workspace, dm, scanInterval);
+			androidDetector.start();
 		}
 		
-		log.info( "DeviceDetector start working..." );
-		notifier = new StatusChangeNotifier( hub, Constants.MSG_TARGET_AGENT );
-		dm = new DeviceManager( Constants.ONE_MINUTE * 5, notifier );
-		dd = new AndroidDeviceDetector( workspace, dm, Constants.ONE_MINUTE );
-		dd.start();
 		isRunning = true;
 		this.start();
-		log.info( "Task scaner starting..." );
-		this.taskUpdater = new InfoUpdater( this );
+		log.info("Task scaner starting...");
+		this.taskUpdater = new InfoUpdater(this);
 		taskUpdater.start();
-		
-		if( getConfig( Constants.AGENT_CONFIG_ENABLE_PLUGIN, Boolean.class, false ) )
+
+		if (getConfig(Constants.AGENT_CONFIG_ENABLE_PLUGIN, Boolean.class, false))
 			startPlugins();
-		if( getConfig( Constants.AGENT_CONFIG_ENABLE_HTTPSERVER, Boolean.class, false ) )
-			startHttpService( CommonUtils.availablePort( 5451 ) );
+		if (getConfig(Constants.AGENT_CONFIG_ENABLE_HTTPSERVER, Boolean.class, false))
+			startHttpService(CommonUtils.availablePort(5451));
 	}
-	
+
 	/**
 	 * Entry to start plugin search, load, and initialization.
 	 */
 	private void startPlugins() {
-		for( String pluginName: PluginManager.pds.keySet() ) {
+		for (String pluginName : PluginManager.pds.keySet()) {
 			try {
-				PluginManager.initialize( this, pluginName );
-				log.info( "Plugin[" + pluginName + "] initialized success." );
-			} catch ( Exception e ) {
-				log.error( "Initialize plugin["+pluginName+"] failed.", e );
+				PluginManager.initialize(this, pluginName);
+				log.info("Plugin[" + pluginName + "] initialized success.");
+			} catch (Exception e) {
+				log.error("Initialize plugin[" + pluginName + "] failed.", e);
 			}
 		}
 	}
 
 	/**
 	 * Entry to start http service.
+	 * 
 	 * @param port
 	 */
-	public void startHttpService( int port ) {
-		HttpFileTransferTargetAcceptor.setWorkspace( this.workspace );
-		if ( httpService == null )
-			httpService = new HttpServer( this, port );
+	public void startHttpService(int port) {
+		HttpFileTransferTargetAcceptor.setWorkspace(this.workspace);
+		PkgInstallController.setWorkspace(this.workspace);
+		if (httpService == null)
+			httpService = new HttpServer(this, port);
 		httpService.start();
-		//Request.Get( "http://localhost:"+port+"/upload?workspace=" + workspace.getAbsolutePath() );
+		// Request.Get( "http://localhost:"+port+"/upload?workspace=" +
+		// workspace.getAbsolutePath() );
 	}
-	
+
 	public void stopHttpService() {
-		if( httpService != null )
+		if (httpService != null)
 			httpService.stop();
 	}
-	
+
 	private void loadConfigFromFile() {
 		try {
-			config.load( CommonUtils.loadResources( Constants.AGENT_CONFIG_FILE, false ) );
-			config.load( CommonUtils.loadResources( Constants.AGENT_CONFIG_FILE, true ) );
-			ftDescriptor = CommonUtils.fromJson( config.getProperty( Constants.AGENT_CONFIG_FTILE_TRANSFER_DESCRIPTOR ), FileTransferDescriptor.class );
-		} catch ( Exception ex ) {
-			log.error( "Load Agent Config File[ " + Constants.AGENT_CONFIG_FILE + " ] failed.", ex );
-		} 
+			config.load(CommonUtils.loadResources(Constants.AGENT_CONFIG_FILE, false));
+			config.load(CommonUtils.loadResources(Constants.AGENT_CONFIG_FILE, true));
+			if(CommonUtils.parseBoolean((String) getConfig(Constants.AGENT_CONFIG_DISABLE_HOSTNAME),false)){
+				CommonUtils.DISABLE_HOSTNAME = true;
+			}
+			ftDescriptor = CommonUtils.fromJson(config.getProperty(Constants.AGENT_CONFIG_FTILE_TRANSFER_DESCRIPTOR),
+					FileTransferDescriptor.class);
+		} catch (Exception ex) {
+			log.error("Load Agent Config File[ " + Constants.AGENT_CONFIG_FILE + " ] failed.", ex);
+		}
 	}
 
 	/**
@@ -215,10 +236,10 @@ public final class AgentNode extends Thread {
 	 * @param key
 	 * @return
 	 */
-	public static Object getConfig( String key ) {
-		if ( key == null )
+	public static Object getConfig(String key) {
+		if (key == null)
 			return null;
-		return config.get( key );
+		return config.get(key);
 	}
 
 	/**
@@ -228,23 +249,23 @@ public final class AgentNode extends Thread {
 	 * @param backup
 	 * @return
 	 */
-	@SuppressWarnings( "unchecked" )
-	public <T> T getConfig( String key, Class<T> t, T backup ) {
-		if ( config != null ) {
-			if ( t == Integer.class ) {
-				return ( T ) CommonUtils.getPropInt( config, key, ( Integer ) backup );
-			} else if ( t == Long.class ) {
-				return ( T ) CommonUtils.getPropLong( config, key, ( Long ) backup );
-			} else if ( t == Float.class ) {
-				return ( T ) CommonUtils.getPropFloat( config, key, ( Float ) backup );
-			} else if ( t == Double.class ) {
-				return ( T ) CommonUtils.getPropDouble( config, key, ( Double ) backup );
-			} else if ( t == Boolean.class ) {
-				return ( T ) CommonUtils.getPropBoolean( config, key, ( Boolean ) backup );
-			} else if ( t == Date.class ) {
-				return ( T ) CommonUtils.getPropDate( config, Constants.DEFAULT_DATE_PATTERN, ( String ) backup );
+	@SuppressWarnings("unchecked")
+	public <T> T getConfig(String key, Class<T> t, T backup) {
+		if (config != null) {
+			if (t == Integer.class) {
+				return (T) CommonUtils.getPropInt(config, key, (Integer) backup);
+			} else if (t == Long.class) {
+				return (T) CommonUtils.getPropLong(config, key, (Long) backup);
+			} else if (t == Float.class) {
+				return (T) CommonUtils.getPropFloat(config, key, (Float) backup);
+			} else if (t == Double.class) {
+				return (T) CommonUtils.getPropDouble(config, key, (Double) backup);
+			} else if (t == Boolean.class) {
+				return (T) CommonUtils.getPropBoolean(config, key, (Boolean) backup);
+			} else if (t == Date.class) {
+				return (T) CommonUtils.getPropDate(config, Constants.DEFAULT_DATE_PATTERN, (String) backup);
 			} else {
-				return ( T ) CommonUtils.getProp( config, key );
+				return (T) CommonUtils.getProp(config, key);
 			}
 		}
 		return null;
@@ -258,7 +279,7 @@ public final class AgentNode extends Thread {
 		return hub;
 	}
 
-	public void setHub( MessageHub hub ) {
+	public void setHub(MessageHub hub) {
 		this.hub = hub;
 	}
 
@@ -266,7 +287,7 @@ public final class AgentNode extends Thread {
 		return dm;
 	}
 
-	public void setDm( DeviceManager dm ) {
+	public void setDm(DeviceManager dm) {
 		this.dm = dm;
 	}
 
@@ -274,7 +295,7 @@ public final class AgentNode extends Thread {
 		return isRunning;
 	}
 
-	public void setRunning( boolean isRunning ) {
+	public void setRunning(boolean isRunning) {
 		this.isRunning = isRunning;
 	}
 
@@ -282,7 +303,7 @@ public final class AgentNode extends Thread {
 		return reservedTests;
 	}
 
-	public void setReserveTests( Map<Test, Long> reserveTests ) {
+	public void setReserveTests(Map<Test, Long> reserveTests) {
 		this.reservedTests = reserveTests;
 	}
 
@@ -290,7 +311,7 @@ public final class AgentNode extends Thread {
 		return runningTests;
 	}
 
-	public void setRunningTests( Map<Test, TestExecutor> runningTests ) {
+	public void setRunningTests(Map<Test, TestExecutor> runningTests) {
 		this.runningTests = runningTests;
 	}
 
@@ -302,15 +323,15 @@ public final class AgentNode extends Thread {
 		return maintainMode;
 	}
 
-	public void setMaintainMode( boolean maintainMode ) {
+	public void setMaintainMode(boolean maintainMode) {
 		this.maintainMode = maintainMode;
 	}
 
-	public void setConfigItem( String key, Object value ) {
-		if( key != null && value != null )
-			config.put( key, value );
+	public void setConfigItem(String key, Object value) {
+		if (key != null && value != null)
+			config.put(key, value);
 	}
-	
+
 	public Map<Test, Collection<Device>> getReservedDevices() {
 		return reservedDevices;
 	}
@@ -326,7 +347,7 @@ public final class AgentNode extends Thread {
 	public StatusChangeNotifier getNotifier() {
 		return notifier;
 	}
-	
+
 	public ScheduledExecutorService getPluginPool() {
 		return pluginPool;
 	}
@@ -339,43 +360,45 @@ public final class AgentNode extends Thread {
 		return fts;
 	}
 
-	private void initMessageHub( String uri ) throws MessageException {
+	private void initMessageHub(String uri) throws MessageException {
 		InputStream in = null;
 		BrokerDescriptor[] bds = null;
 		try {
-			File mqConfigFile = new File( Constants.MQ_CONFIG_FILE );
-			if( mqConfigFile.exists() && mqConfigFile.isFile() && mqConfigFile.length()>0 ) {
-				in = CommonUtils.loadResources( Constants.MQ_CONFIG_FILE, true );
+			File mqConfigFile = new File(Constants.MQ_CONFIG_FILE);
+			if (mqConfigFile.exists() && mqConfigFile.isFile() && mqConfigFile.length() > 0) {
+				in = CommonUtils.loadResources(Constants.MQ_CONFIG_FILE, true);
 				StringWriter sw = new StringWriter();
-				IOUtils.copy( in, sw );
-				bds = CommonUtils.fromJson( sw.toString(), new TypeToken<BrokerDescriptor[]>(){}.getType() );
-				hub = new MessageHub( Constants.MSG_TARGET_AGENT, bds );
-			} else if( uri != null ) {
-				hub = new MessageHub( uri, Constants.MSG_TARGET_AGENT );
+				IOUtils.copy(in, sw);
+				bds = CommonUtils.fromJson(sw.toString(), new TypeToken<BrokerDescriptor[]>() {
+				}.getType());
+				hub = new MessageHub(Constants.MSG_TARGET_AGENT, bds);
+			} else if (uri != null) {
+				hub = new MessageHub(uri, Constants.MSG_TARGET_AGENT);
 			} else {
-				throw new MessageException( "Can't initial messageHub, cos nor mqConfig file or uri provided." );
+				throw new MessageException("Can't initial messageHub, cos nor mqConfig file or uri provided.");
 			}
-			
+
 			// agent status
-			hub.bindHandlers( Constants.BROKER_STATUS, Topic.class, HUB_AGENT_STATUS, null, null );
-			hub.bindHandlers( Constants.BROKER_STATUS, Topic.class, HUB_TASK_STATUS, Constants.MSG_HEAD_TARGET + "='"
-					+ this.getAgentInfo( HOST_ONLY ).getHost() + "'", new WaitTaskNotifier( this, taskStatusEventBus,
-					deviceBusyEventBus ) );
-			hub.bindHandlers( Constants.BROKER_TASK, Queue.class, HUB_TASK_COMMUNICATION, Constants.MSG_HEAD_TARGET + "='"
-					+ Constants.MSG_TARGET_AGENT + CommonUtils.getHostName() + "'", new TaskCommunicator( this ) );
-			hub.bindHandlers( Constants.BROKER_TASK, Topic.class, HUB_TASK_PUBLISH, null, new TaskSubscriber( this, taskStatusEventBus,
-					deviceBusyEventBus ) );
-			hub.bindHandlers( Constants.BROKER_NOTIFICATION, Queue.class, Constants.HUB_AGENT_NOTIFICATION, Constants.MSG_HEAD_TARGET + "='"
-					+ Constants.MSG_TARGET_AGENT + CommonUtils.getHostName() + "'", new NotificationHandler( this ) );
-			hub.bindHandlers( Constants.BROKER_STATUS, Topic.class, Constants.HUB_TEST_STATUS, null, null );
-			hub.bindHandlers( Constants.BROKER_STATUS, Topic.class, Constants.HUB_DEVICE_STATUS, null, null );
-			hub.bindHandlers( Constants.BROKER_FT, Queue.class, Constants.HUB_FILE_TRANSFER, Constants.MSG_HEAD_TARGET + "='"
-			+ Constants.MSG_TARGET_AGENT + CommonUtils.getHostName()+"'", fts );
-			fts.setHub( hub );
-		}catch( Exception ex ) {
-			throw new MessageException( "Initialize MessageHub Failed.", ex );
-		}finally {
-			CommonUtils.closeQuietly( in );
+			hub.bindHandlers(Constants.BROKER_STATUS, Topic.class, HUB_AGENT_STATUS, null, null);
+			/*hub.bindHandlers(Constants.BROKER_STATUS, Topic.class, HUB_TASK_STATUS, Constants.MSG_HEAD_TARGET + "='"
+					+ this.getAgentInfo(HOST_ONLY).getHost() + "'", new WaitTaskNotifier(this, taskStatusEventBus,
+					deviceBusyEventBus));*/
+			hub.bindHandlers(Constants.BROKER_TASK, Queue.class, HUB_TASK_COMMUNICATION, Constants.MSG_HEAD_TARGET
+					+ "='" + Constants.MSG_TARGET_AGENT + CommonUtils.getHostName() + "'", new TaskCommunicator(this));
+			hub.bindHandlers(Constants.BROKER_TASK, Topic.class, HUB_TASK_PUBLISH, null, new TaskSubscriber(this,
+					taskStatusEventBus, deviceBusyEventBus));
+			hub.bindHandlers(Constants.BROKER_NOTIFICATION, Queue.class, Constants.HUB_AGENT_NOTIFICATION,
+					Constants.MSG_HEAD_TARGET + "='" + Constants.MSG_TARGET_AGENT + CommonUtils.getHostName() + "'",
+					new NotificationHandler(this));
+			hub.bindHandlers(Constants.BROKER_STATUS, Topic.class, Constants.HUB_TEST_STATUS, null, null);
+			hub.bindHandlers(Constants.BROKER_STATUS, Topic.class, Constants.HUB_DEVICE_STATUS, null, null);
+			hub.bindHandlers(Constants.BROKER_FT, Queue.class, Constants.HUB_FILE_TRANSFER, Constants.MSG_HEAD_TARGET
+					+ "='" + Constants.MSG_TARGET_AGENT + CommonUtils.getHostName() + "'", fts);
+			fts.setHub(hub);
+		} catch (Exception ex) {
+			throw new MessageException("Initialize MessageHub Failed.", ex);
+		} finally {
+			CommonUtils.closeQuietly(in);
 		}
 
 	}
@@ -389,8 +412,8 @@ public final class AgentNode extends Thread {
 	public Map<String, String> getNodeStatus() {
 		try {
 			return CommonUtils.getPcStatus();
-		} catch ( IOException e ) {
-			log.error( "Get AgentNode status met Exception.", e );
+		} catch (IOException e) {
+			log.error("Get AgentNode status met Exception.", e);
 		}
 		return new HashMap<String, String>();
 	}
@@ -408,16 +431,17 @@ public final class AgentNode extends Thread {
 	 *            could be HOST_ONLY / TASK_INCLUDE / DEVICE_INCLUDE
 	 * @return
 	 */
-	public Agent getAgentInfo( int level ) {
-		if ( level <= 0 || level > 4 )
+	public Agent getAgentInfo(int level) {
+		if (level <= 0 || level > 4)
 			level = HOST_ONLY;
-		Agent agent = new Agent( CommonUtils.getHostName() );
-		if ( level > HOST_ONLY )
-			agent.getRunningTasks().addAll( agent.getRunningTasks() );
-		if ( level > TASK_INCLUDE )
-			agent.getDevices().addAll( dm.listDevices() );
-		if ( level > DEVICE_INCLUDE )
-			agent.getProperties().putAll( getNodeStatus() );
+		Agent agent = new Agent(CommonUtils.getHostName());
+		agent.getProperties().put(Constants.MQ_URL, this.getHub().getMqUrl().toLowerCase().trim());
+		if (level > HOST_ONLY)
+			agent.getRunningTasks().addAll(agent.getRunningTasks());
+		if (level > TASK_INCLUDE)
+			agent.getDevices().addAll(dm.listDevices());
+		if (level > DEVICE_INCLUDE)
+			agent.getProperties().putAll(getNodeStatus());
 		return agent;
 	}
 
@@ -427,47 +451,53 @@ public final class AgentNode extends Thread {
 	 * @param requirements
 	 * @return
 	 */
-	public DeviceCapacity checkCondition( DeviceRequirement requirements ) {
-		DeviceCapacity capacity = new DeviceCapacity( requirements );
+	public DeviceCapacity checkCondition(String testId, DeviceRequirement requirements) {
+		if(testId == null)
+			return null;
+		if(requirements == null)
+			requirements = new DeviceRequirement();
+		DeviceCapacity capacity = new DeviceCapacity(testId, requirements);
 		Collection<Device> devices = dm.listDevices();
 		Device mainRequire = requirements.getMain();
+		if(mainRequire == null)
+			mainRequire = Device.createRequirement(null);
 		Device refRequire = requirements.getRef();
 		int avail = 0;
 		int busy = 0;
 
 		List<Device> candidates = new ArrayList<Device>();
-		for ( Device dut : devices ) {
-			if ( mainRequire.match( dut ) )
-				candidates.add( dut );
+		for (Device dut : devices) {
+			if (mainRequire.match(dut))
+				candidates.add(dut);
 		}
 
-		if ( refRequire == null ) {
-			for ( Device d : candidates ) {
-				if ( d.getState() == Device.DEVICE_FREE )
+		if (refRequire == null) {
+			for (Device d : candidates) {
+				if (d.getState() == Device.DEVICE_FREE && d.isConnected())
 					avail++;
-				else if ( d.getState() != Device.DEVICE_LOST )
+				else if (d.getState() != Device.DEVICE_LOST)
 					busy++;
 			}
-			capacity.setAvailable( avail );
-			capacity.setNeedWait( busy );
+			capacity.setAvailable(avail);
+			capacity.setNeedWait(busy);
 		} else { // complex situation.
 			// first check if the main and ref have identity condition
-			if ( requirements.getMain().match( requirements.getRef() ) ) {
-				for ( Device d : candidates ) {
-					if ( d.getState() == Device.DEVICE_FREE )
+			if (requirements.getMain().match(requirements.getRef())) {
+				for (Device d : candidates) {
+					if (d.getState() == Device.DEVICE_FREE && d.isConnected())
 						avail++;
-					else if ( d.getState() != Device.DEVICE_LOST )
+					else if (d.getState() != Device.DEVICE_LOST)
 						busy++;
 				}
 				int rAvail = avail / 2;
-				int rBusy = ( ( avail % 2 ) + busy ) / 2;
-				capacity.setAvailable( rAvail );
-				capacity.setNeedWait( rBusy );
+				int rBusy = ((avail % 2) + busy) / 2;
+				capacity.setAvailable(rAvail);
+				capacity.setNeedWait(rBusy);
 			} else {
 				List<Device> candidatesRef = new ArrayList<Device>();
-				for ( Device dut : devices ) {
-					if ( dut.match( mainRequire ) )
-						candidatesRef.add( dut );
+				for (Device dut : devices) {
+					if (dut.match(mainRequire))
+						candidatesRef.add(dut);
 				}
 				int avMain = 0;
 				int avRef = 0;
@@ -477,21 +507,21 @@ public final class AgentNode extends Thread {
 				// first, find one free device from main candidate list.
 				Iterator<Device> im = candidates.iterator();
 				Iterator<Device> ir = candidatesRef.iterator();
-				while ( candidates.size() > 0 ) {
-					while ( im.hasNext() ) {
+				while (candidates.size() > 0) {
+					while (im.hasNext()) {
 						Device m = im.next();
-						candidatesRef.remove( m );
-						if ( m.getState() == Device.DEVICE_FREE )
+						candidatesRef.remove(m);
+						if (m.getState() == Device.DEVICE_FREE && m.isConnected())
 							avMain++;
 						else
 							buMain++;
 
 						break;
 					}
-					while ( ir.hasNext() ) {
+					while (ir.hasNext()) {
 						Device r = ir.next();
-						candidatesRef.remove( r );
-						if ( r.getState() == Device.DEVICE_FREE )
+						candidatesRef.remove(r);
+						if (r.getState() == Device.DEVICE_FREE && r.isConnected())
 							avRef++;
 						else
 							buRef++;
@@ -499,10 +529,10 @@ public final class AgentNode extends Thread {
 						break;
 					}
 				}
-				avail = Math.min( avMain, avRef );
-				busy = Math.min( buMain, buRef );
-				capacity.setAvailable( avail );
-				capacity.setNeedWait( busy );
+				avail = Math.min(avMain, avRef);
+				busy = Math.min(buMain, buRef);
+				capacity.setAvailable(avail);
+				capacity.setNeedWait(busy);
 			}
 		}
 
@@ -517,54 +547,56 @@ public final class AgentNode extends Thread {
 	 */
 	@Override
 	public void run() {
-		while ( isRunning ) {
+		while (isRunning) {
 			try {
-				if( this.getConfig( Constants.AGENT_CONFIG_CHECK_HANG_TEST, Boolean.class, false ) )
+				if (this.getConfig(Constants.AGENT_CONFIG_CHECK_HANG_TEST, Boolean.class, false))
 					releaseHangTests();
-				//if( this.getConfig( Constants.AGENT_CONFIG_CHECK_INVALID_RESERVATION_DEVICE, Boolean.class, false ) )
-				//releaseHangDevices();
-				TimeUnit.SECONDS.sleep( 60 );
-			} catch ( InterruptedException e ) {
-				log.error( "AgentNode have got a interrupt.", e );
+				// if( this.getConfig(
+				// Constants.AGENT_CONFIG_CHECK_INVALID_RESERVATION_DEVICE,
+				// Boolean.class, false ) )
+				// releaseHangDevices();
+				TimeUnit.SECONDS.sleep(60);
+			} catch (InterruptedException e) {
+				log.error("AgentNode have got a interrupt.", e);
 			}
 		}
 	}
 
-	public void releaseDevices( Collection<Device> devices ) {
-		if ( devices != null ) {
-			for ( Device d : devices ) {
-				releaseDevice( d );
-			}
-		}
-	}
-	
-	public void releaseDevice( Device device ) {
-		if( device != null ) {
-			device = dm.getDeviceBy( Constants.DEVICE_SN, device.getAttribte( Constants.DEVICE_SN ) );
-			device.setRole( Device.ROLE_MAIN );
-			device.setState( Device.DEVICE_FREE );
-			device.setTaskStatus( "" );
-			device.setPreState( Device.DEVICE_FREE );
-			log.info( "Releasing device:" + device.getId() );
-		}
-	}
-	
+//	public void releaseDevices(Collection<Device> devices) {
+//		if (devices != null) {
+//			for (Device d : devices) {
+//				releaseDevice(d);
+//			}
+//		}
+//	}
+
+//	public void releaseDevice(Device device) {
+//		if (device != null) {
+//			device = dm.getDeviceBy(Constants.DEVICE_SN, device.getAttribute(Constants.DEVICE_SN));
+//			device.setRole(Device.ROLE_MAIN);
+//			device.setState(Device.DEVICE_FREE);
+//			device.setTaskStatus("");
+//			device.setPreState(Device.DEVICE_FREE);
+//			log.info("Releasing device:" + device.getId());
+//		}
+//	}
+
 	/**
 	 * Check and Release tasks which didn't start and exceed the maximum
 	 * timeout.
 	 */
 	private void releaseHangTests() {
 		long curr = System.currentTimeMillis();
-		for ( Test t : this.reservedTests.keySet() ) {
-			long cr = this.reservedTests.get( t );
-			long timeout = getConfig( Constants.AGENT_CONFIG_HANG_TEST_TIMEOUT, Long.class, Constants.ONE_MINUTE * 1800 );
-			if ( ( curr - cr ) > timeout ) {
-				this.cancelTest( t.getId(), "This test has reached the *HANG Test* criteria[" + CommonUtils.convert( timeout )+"], cancelled." );
-				//this.reservedTests.remove( t );
-				//Collection<Device> devices = this.reservedDevices.remove( t );
-				//releaseDevices( devices );
-				log.info( "Release test[" + t.getId() + "] , because it has been waiting over " + CommonUtils.convert( curr - cr ) );
-				//devices.clear();
+		for (Test t : this.reservedTests.keySet()) {
+			long cr = this.reservedTests.get(t);
+			long timeout = getConfig(Constants.AGENT_CONFIG_HANG_TEST_TIMEOUT, Long.class, Constants.ONE_MINUTE * 3);
+			if ((curr - cr) > timeout) {
+				log.warn("Test["+t.getId()+" has reached the *HANG Test* criteria"+ CommonUtils.convert(timeout)+"], should be cancelled");
+				int result = this.cancelTest(t.getId(),
+						"This test has reached the *HANG Test* criteria[" + CommonUtils.convert(timeout)
+								+ "], cancelled.");
+				log.info("Cancel Test result:" + result+".Release test[" + t.getId() + "] , because it has been waiting over "
+						+ CommonUtils.convert(curr - cr));
 			}
 		}
 
@@ -577,39 +609,45 @@ public final class AgentNode extends Thread {
 	 * @param task
 	 * @return
 	 */
-	public Collection<Device> reserveDevices( Test test, DeviceRequirement requirements ) {
-		Collection<Device> devices = dm.listDevices();
+	/*public Collection<Device> reserveDevices(Test test, DeviceRequirement requirements) {
+		List<Device> devices = new ArrayList<Device>(dm.listDevices());
+		Collections.shuffle(devices);
 		Collection<Device> candidates = new ArrayList<Device>();
 		Device require = requirements.getMain();
-		for ( Device dut : devices ) {
-			if ( require.match( dut ) && !candidates.contains( dut ) && dut.getState() == Device.DEVICE_FREE ) {
-				dut.setRole( Device.ROLE_MAIN );
-				dut.setState( Device.DEVICE_RESERVED );
-				dut.setTaskStatus( test.getId() );
-				candidates.add( dut );
+		for (Device dut : devices) {
+			if (require.match(dut) && !candidates.contains(dut) && dut.getState() == Device.DEVICE_FREE) {
+				if(!dut.isConnected()) {
+					Device d = dm.getDeviceBy(Constants.DEVICE_ID, dut.getId());
+					d.setState(Device.DEVICE_LOST_TEMP);
+					continue;
+				}
+				dut.setRole(Device.ROLE_MAIN);
+				dut.setState(Device.DEVICE_RESERVED);
+				dut.setTaskStatus(test.getTaskID()+Constants.TASK_TEST_SPLITER+test.getId());
+				candidates.add(dut);
 				break;
 			}
 		}
 
-		if ( candidates.isEmpty() )
+		if (candidates.isEmpty())
 			return null;
 
 		Device requireRef = requirements.getRef();
-		if ( requireRef != null ) {
-			for ( Device dut : devices ) {
-				if ( requireRef.match( dut ) && !candidates.contains( dut ) && dut.getState() == Device.DEVICE_FREE ) {
-					dut.setRole( Device.ROLE_REF );
-					dut.setState( Device.DEVICE_RESERVED );
-					dut.setTaskStatus( test.getId() );
-					candidates.add( dut );
+		if (requireRef != null) {
+			for (Device dut : devices) {
+				if (requireRef.match(dut) && !candidates.contains(dut) && dut.getState() == Device.DEVICE_FREE) {
+					dut.setRole(Device.ROLE_REF);
+					dut.setState(Device.DEVICE_RESERVED);
+					dut.setTaskStatus(test.getId());
+					candidates.add(dut);
 					break;
 				}
 			}
-			if ( candidates.size() < 2 )
+			if (candidates.size() < 2)
 				return null;
 		}
 		return candidates;
-	}
+	}*/
 
 	/**
 	 * Reserve the task in this agent node, actually including task reserve and
@@ -618,27 +656,36 @@ public final class AgentNode extends Thread {
 	 * @param task
 	 * @return
 	 */
-	public boolean reserveForTest( Test test, DeviceRequirement requirement ) {
-		if ( test == null || requirement == null ) {
-			log.error( "Received an NUll test request or Empty requirement." );
+	public boolean reserveForTest(Test test, DeviceRequirement requirement) {
+		if (test == null) {
+			log.error("Received an NUll test request");
 			return false;
 		} else {
-			if ( !reservedTests.keySet().contains( test ) ) {
-				Collection<Device> devices = reserveDevices( test, requirement );
-				if ( null != devices ) {
+			if(requirement == null)
+				requirement = new DeviceRequirement();
+			if (!reservedTests.keySet().contains(test)) {
+				Collection<Device> devices = dm.reserveDevices(test, requirement);
+				if (null != devices) {
 					long current = System.currentTimeMillis();
-					reservedTests.put( test, current );
-					this.reservedDevices.put( test, devices );
-					test.setPhase( Phase.PREPARING );
-					log.info( "Reserve Devices for Test success! Test:" + test );
+					reservedTests.put(test, current);
+					if(reservedDevices.containsKey(test)) {
+						Collection<Device> ds = reservedDevices.remove(test);
+						if(ds != null && !ds.isEmpty()) {
+							log.info("Begin to release devices for test:" + test.getId()+"("+test.getTaskID()+") because test have already been reserved before.");
+							dm.releaseDevices(ds);
+						}
+					}
+					this.reservedDevices.put(test, devices);
+					test.setPhase(Phase.PREPARING);
+					log.info("Reserve Devices for Test success! Test:" + test);
 					return true;
 				} else {
-					log.warn( "Can't reserve Devices for Test:" + test + ", current status is :"
-							+ CommonUtils.toJson( this.dm.listDevices() ) );
+					log.warn("Can't reserve Devices for Test:" + test + ", current status is :"
+							+ CommonUtils.toJson(this.dm.listDevices()));
 					return false;
 				}
 			} else {
-				log.warn( "Duplicated reserved Test:" + test );
+				log.warn("Duplicated reserved Test:" + test);
 				return true;
 			}
 
@@ -652,19 +699,19 @@ public final class AgentNode extends Thread {
 	 *            device requirements.
 	 * @return
 	 */
-	protected String getWaitEstimation( DeviceRequirement requirements ) {
+	protected String getWaitEstimation(DeviceRequirement requirements) {
 		return "Unknown";
 	}
-	
+
 	/**
 	 * Check if assigned testId is running already.
 	 * 
 	 * @param testId
 	 * @return
 	 */
-	public boolean isTestRunning( String testId ) {
-		for( Test test : this.runningTests.keySet() ) {
-			if( test.getId().equals( testId ) ) {
+	public boolean isTestRunning(String testId) {
+		for (Test test : this.runningTests.keySet()) {
+			if (test.getId().equals(testId)) {
 				return true;
 			}
 		}
@@ -677,34 +724,39 @@ public final class AgentNode extends Thread {
 	 * 
 	 * @param task
 	 */
-	public void startTest( String testId, String target ){
-		if( isTestRunning( testId ) ) {
-			log.warn( "Assigned test[" + testId + "] request by " + target + " have already been started. No need to restart." );
+	public void startTest(String testId, String target) {
+		if (isTestRunning(testId)) {
+			log.warn("Assigned test[" + testId + "] request by " + target
+					+ " have already been started. No need to restart.");
 			return;
 		}
-		log.info( "Test:[" + testId + "] is going to start..." );
+		log.info("Test:[" + testId + "] is going to start...");
 		Test test = null;
-		for( Test t : reservedTests.keySet() ) {
-			if( t.getId().equals( testId ) ) {
+		for (Test t : reservedTests.keySet()) {
+			if (t.getId().equals(testId)) {
 				test = t;
+				test.setPhase(Phase.STARTED);
 				break;
 			}
 		}
-		if( test == null ) {
-			log.error( "Can't find Test:[" + testId + "] from reserved devices list. Maybe not in current Agent?");
+		if (test == null) {
+			log.error("Can't find Test:[" + testId + "] from reserved devices list. Maybe not in current Agent?");
 			return;
 		}
-		reservedTests.remove( test );
-		Pipe pipe = this.hub.getPipe( Constants.HUB_TEST_STATUS );
-		BufferedMessageOutputStream tracker = new BufferedMessageOutputStream( pipe.getParentBroker().getSession(),
-				pipe.getProducer(), Constants.MSG_HEAD_TESTID, test.getId(), LogUtils.getLogger( "Exec_" + test.getId() ) );
-		Collection<Device> rDevices = reservedDevices.get( test );
-		TestExecutor te = new TestExecutor( test, this, rDevices, tracker, test.getTimeout(), target );
-		this.runningTests.put( test, te );
-		FutureTask<Boolean> future = new FutureTask<Boolean>( te, null );
-		getPool().execute( future );
-		test.setPhase( Phase.STARTED );
-		log.info( "Test:[" + test + "] is started." );
+		reservedTests.remove(test);
+		Pipe pipe = this.hub.getPipe(Constants.HUB_TEST_STATUS);
+		OutputStream tracker = null;
+		if(test.isSendOutput()) {
+			tracker = new BufferedMessageOutputStream(pipe.getParentBroker().getSession(),
+				pipe.getProducer(), Constants.MSG_HEAD_TESTID, test.getId(), LogUtils.getLogger("Exec_" + test.getId()));
+		}
+		Collection<Device> rDevices = reservedDevices.get(test);
+		TestExecutor te = new TestExecutor(test, this, rDevices, tracker, test.getTimeout(), target);
+		this.runningTests.put(test, te);
+		FutureTask<Boolean> future = new FutureTask<Boolean>(te, null);
+		getPool().execute(future);
+		test.setPhase(Phase.STARTED);
+		log.info("Test:[" + test + "] is started.");
 	}
 
 	/**
@@ -713,20 +765,20 @@ public final class AgentNode extends Thread {
 	 * @param test
 	 * @return
 	 */
-	public File createTestWorkspace( Test test ) {
-		File file = new File( workspace, test.getId() );
-		if ( file.exists() ) {
-			if ( CommonUtils.parseBoolean( ( String ) config.get( Constants.AGENT_CONFIG_DUP_WORKSPACE_BACKUP ) ) ) {
-				file.renameTo( new File( workspace, file.getName() + "_" + System.currentTimeMillis() ) );
-				file = new File( workspace, test.getId() );
+	public File createTestWorkspace(Test test) {
+		File file = new File(workspace, test.getId());
+		if (file.exists()) {
+			if (CommonUtils.parseBoolean((String) config.get(Constants.AGENT_CONFIG_DUP_WORKSPACE_BACKUP))) {
+				file.renameTo(new File(workspace, file.getName() + "_" + System.currentTimeMillis()));
+				file = new File(workspace, test.getId());
 			} else {
 				try {
-					FileUtils.deleteDirectory( file );
-				} catch ( IOException e ) {
-					log.error( "Clean duplicated test workspace failed. path=" + file.getAbsolutePath(), e );
-					log.warn( "Try to use a different test workspace for this test." );
-					file = new File( workspace, test.getId() + "_" + CommonUtils.generateToken(3) );
-					backupWorkspace.put( test.getId(), file.getAbsolutePath() );
+					FileUtils.deleteDirectory(file);
+				} catch (IOException e) {
+					log.error("Clean duplicated test workspace failed. path=" + file.getAbsolutePath(), e);
+					log.warn("Try to use a different test workspace for this test.");
+					file = new File(workspace, test.getId() + "_" + CommonUtils.generateToken(3));
+					backupWorkspace.put(test.getId(), file.getAbsolutePath());
 				}
 			}
 		}
@@ -744,67 +796,97 @@ public final class AgentNode extends Thread {
 	 * @param phase
 	 *            Final execution result.
 	 */
-	@SuppressWarnings( "serial" )
-	public void finishTest( TestExecutor te ) {
+	public void finishTest(TestExecutor te) {
 		Test test = te.getTest();
-		log.info( "Test["+te.getTest().getId()+"] finished executing with Phase:" + test.getPhase() );
+		log.info("Test[" + te.getTest().getId() + "] finished executing with Phase:" + test.getPhase());
 		try {
 			// first release devices.
-			log.info( "Releasing devices for test["+test.getId()+"]" );
+			log.info("Releasing devices for test[" + test.getId() + "]");
 			Collection<Device> devices = te.getDevices();
-			this.releaseDevices( devices );
+			log.info("Begin to release devices for test:" + test.getId()+"("+test.getTaskID()+") because test was finished.");
+			dm.releaseDevices(devices);
 			devices.clear();
-			this.reservedDevices.remove( test );
+			this.reservedDevices.remove(test);
 			// remove from global monitor lists.
 			// check if it was a task own by this agent node.
-			if ( this.runningTests.containsKey( test ) ) {
-				runningTests.remove( test );
+			if (this.runningTests.containsKey(test)) {
+				runningTests.remove(test);
 			}
 
-			if ( this.reservedTests.containsKey( test ) ) {
+			if (this.reservedTests.containsKey(test)) {
 				// still in reserve state, just cancel
-				reservedTests.remove( test );
+				reservedTests.remove(test);
 			}
 
-			Message m = this.hub.createMessage( Constants.BROKER_TASK );
-			Pipe taskPipe = hub.getPipe( Constants.HUB_TASK_COMMUNICATION );
-			Pipe testStatusPipe = hub.getPipe( Constants.HUB_TEST_STATUS );
-			setProperty( m, Constants.MSG_HEAD_TARGET, te.getClientTarget() );
-			setProperty( m, Constants.MSG_HEAD_TASKID, te.getTest().getTaskID() );
-			setProperty( m, Constants.MSG_HEAD_TESTID, te.getTest().getId() );
-			setProperty( m, Constants.MSG_HEAD_TRANSACTION, Constants.MSG_TEST_FINISHED );
-			
-			final File resultFile = new File( te.getWorkspace(), te.getTest().getResultsFilename() );
-			if ( resultFile.exists() ) {
-				log.info( "Test[" + te.getTest().getId() + "] have been finished, prepare for sending results." );
-				log.info( "Result File exist with length:" + resultFile.length() );
-				FileTransferTask ftt = new FileTransferTask( Constants.MSG_TARGET_AGENT + CommonUtils.getHostName(), te.getClientTarget(), te.getTest().getTaskID(), te.getTest().getId(), new ArrayList<File>() {{ add( resultFile ); }} );
-				fts.sendTo( ftt );
-				log.info( "Begin to send test result back to test client.TestId:" + ftt.getTestId() + ", FtTaskId[" + ftt.getId() +"]" );
-			} else {
-				log.error( "ResultFile: " + resultFile + " didn't exist" );
-				setProperty( m, Constants.MSG_HEAD_TEST_RESULT, Constants.MSG_TEST_FAIL );
-				if( test.getPhase() == Phase.FINISHED )
-					setProperty( m, Constants.MSG_HEAD_ERROR, "ResultFile: " + resultFile + " didn't exist"  );
-				else
-					setProperty( m, Constants.MSG_HEAD_ERROR, te.getFailureInfo()+", and ResultFile: " + resultFile + " didn't exist" );
-				taskPipe.getProducer().send( m );
-				testStatusPipe.getProducer().send( m );
+			Message m = this.hub.createMessage(Constants.BROKER_TASK);
+			Pipe taskPipe = hub.getPipe(Constants.HUB_TASK_COMMUNICATION);
+			Pipe testStatusPipe = hub.getPipe(Constants.HUB_TEST_STATUS);
+			setProperty(m, Constants.MSG_HEAD_TARGET, te.getClientTarget());
+			setProperty(m, Constants.MSG_HEAD_TASKID, te.getTest().getTaskID());
+			setProperty(m, Constants.MSG_HEAD_TESTID, te.getTest().getId());
+			setProperty(m, Constants.MSG_HEAD_TRANSACTION, Constants.MSG_TEST_FINISHED);
+
+			//final File resultFile = new File(te.getWorkspace(), te.getTest().getResultsFilename());
+			List<File> resultFiles = new ArrayList<File>();
+			Map<String,Boolean> missingFiles = new HashMap<String,Boolean>();
+			boolean isSucc = validateResultFiles(te, resultFiles, missingFiles);
+			if(!isSucc)
+				log.info("Not All mandatory result files available.");
+			if(!missingFiles.isEmpty()) {
+				log.warn("Test["+test.getId()+"] missing some result files:" + CommonUtils.toJson(missingFiles));
 			}
-			markIfCleanWorkspace( te );
-		} catch ( Exception ex ) {
-			log.error( "Handle Finished/Failed Test got exception.", ex );
+			
+			if(!resultFiles.isEmpty()) {
+				log.info("Test[" + test.getId() + "] have been finished, prepare for sending results.");
+				//log.info("Result File exist with length:" + resultFile.length());
+				FileTransferTask ftt = new FileTransferTask(Constants.MSG_TARGET_AGENT + CommonUtils.getHostName(),
+						te.getClientTarget(), te.getTest().getTaskID(), te.getTest().getId(),resultFiles);
+				fts.sendTo(ftt);
+				log.info("Begin to send test result back to test client.TestId:" + ftt.getTestId() + ", FtTaskId["
+						+ ftt.getId() + "]");
+			} else {
+				log.error("Test[" + test.getId() + "] failed because some of mandatory result files missing.");
+				setProperty(m, Constants.MSG_HEAD_TEST_RESULT, Constants.MSG_TEST_FAIL);
+				if (test.getPhase() == Phase.FINISHED)
+					setProperty(m, Constants.MSG_HEAD_ERROR, "ResultFiles: " + CommonUtils.toJson(missingFiles) + " didn't exist");
+				else
+					setProperty(m, Constants.MSG_HEAD_ERROR, te.getFailureInfo() + ", and ResultFiles: " + CommonUtils.toJson(missingFiles)
+							+ " didn't exist");
+				taskPipe.getProducer().send(m);
+				testStatusPipe.getProducer().send(m);
+			}
+			markIfCleanWorkspace(te);
+		} catch (Exception ex) {
+			log.error("Handle Finished/Failed Test got exception.", ex);
 		}
 	}
-	
-	private void markIfCleanWorkspace( TestExecutor te ) {
-		if( te.getTest().getPhase() == Phase.FAILED ) {
-			File f = new File( te.getWorkspace(), "dontdelete.tmp" );
-			if( !f.exists() ) {
+
+	private boolean validateResultFiles(TestExecutor te, List<File> resultFiles, Map<String,Boolean> missingFiles) {
+		Test t = te.getTest();
+		File f = null;
+		boolean result = true;
+		boolean isMandatory = false;
+		for(String resultFile : t.getResultFiles().keySet()) {
+			f = new File(te.getWorkspace(), resultFile);
+			if(!f.exists()) {
+				isMandatory = t.getResultFiles().get(resultFile);
+				missingFiles.put(resultFile, isMandatory);
+				if(isMandatory)
+					result = false;
+			}else
+				resultFiles.add(f);
+		}
+		return result;
+	}
+
+	private void markIfCleanWorkspace(TestExecutor te) {
+		if (te.getTest().getPhase() == Phase.FAILED) {
+			File f = new File(te.getWorkspace(), "dontdelete.tmp");
+			if (!f.exists()) {
 				try {
 					f.createNewFile();
-				} catch ( IOException e ) {
-					log.error( "Create Don't clean file flag failed.", e );
+				} catch (IOException e) {
+					log.error("Create Don't clean file flag failed.", e);
 				}
 			}
 		}
@@ -817,20 +899,20 @@ public final class AgentNode extends Thread {
 	 * @param task
 	 * @return
 	 */
-	public int cancelTest( String testId, String reason ) {
+	public int cancelTest(String testId, String reason) {
 		Test test = null;
-		log.info( "Start to cancel a test:" + testId + " for reason:" +reason );
+		log.info("Start to cancel a test:" + testId + " for reason:" + reason);
 
-		for ( Test t : runningTests.keySet() ) {
-			if ( t.getId().equals( testId ) ) {
+		for (Test t : runningTests.keySet()) {
+			if (t.getId().equals(testId)) {
 				test = t;
 				break;
 			}
 		}
 
-		if ( test == null ) {
-			for ( Test t : this.reservedTests.keySet() ) {
-				if ( t.getId().equals( testId ) ) {
+		if (test == null) {
+			for (Test t : this.reservedTests.keySet()) {
+				if (t.getId().equals(testId)) {
 					test = t;
 					break;
 				}
@@ -838,26 +920,29 @@ public final class AgentNode extends Thread {
 		}
 		int result = Constants.TASK_CANCEL_SUCC;
 
-		if ( test != null ) {
-			test.setPhase( Phase.STOPPED );
+		if (test != null) {
+			test.setPhase(Phase.STOPPED);
 			// release all the devices first.
-			Collection<Device> devices = this.reservedDevices.remove( test );
-			releaseDevices( devices );
-			devices.clear();
-			
-			// check if it was a task own by this agent node.
-			if ( this.runningTests.containsKey( test ) ) {
-				TestExecutor te = runningTests.remove( test );
-				te.stop( reason );
+			Collection<Device> devices = this.reservedDevices.remove(test);
+			log.info("Begin to release devices for test:" + test.getId()+"("+test.getTaskID()+") because test was cancelled.");
+			if(devices != null && !devices.isEmpty()) {
+				dm.releaseDevices(devices);
+				devices.clear();
 			}
 
-			if ( this.reservedTests.containsKey( test ) ) {
+			// check if it was a task own by this agent node.
+			if (this.runningTests.containsKey(test)) {
+				TestExecutor te = runningTests.remove(test);
+				te.stop(reason);
+			}
+
+			if (this.reservedTests.containsKey(test)) {
 				// still in reserve state, just cancel
-				reservedTests.remove( test );
+				reservedTests.remove(test);
 			}
 		} else {
-			log.warn( "The Test[" + test
-					+ "] didn't in this agent node, maybe it have been finished or not running on this node." );
+			log.warn("The Test[" + test
+					+ "] didn't in this agent node, maybe it have been finished or not running on this node.");
 			result = Constants.TASK_CANCEL_NOTFOUND;
 		}
 		return result;
@@ -868,25 +953,25 @@ public final class AgentNode extends Thread {
 	 * 
 	 * @param testId
 	 */
-	public void cleanUpTest( String testId ) {
+	public void cleanUpTest(String testId) {
 		try {
-			File tw = new File( workspace, testId );
-			if ( tw.exists() && tw.isDirectory() ) {
-				File flag = new File( tw, "dontdelete.tmp" );
-				if( !flag.exists() )
-					FileUtils.deleteDirectory( tw );
+			File tw = new File(workspace, testId);
+			if (tw.exists() && tw.isDirectory()) {
+				File flag = new File(tw, "dontdelete.tmp");
+				if (!flag.exists())
+					FileUtils.deleteDirectory(tw);
 			}
-		} catch ( Exception ex ) {
-			log.error( "Cleanup test workspace failed. testid=" + testId, ex );
+		} catch (Exception ex) {
+			log.error("Cleanup test workspace failed. testid=" + testId, ex);
 		}
 	}
 
 	/**
 	 * Shutdown immediately.
 	 */
-	public void shutdown( String reason ) throws Exception {
-		System.err.println( "Stop Agent service because of :" + reason );
-		System.exit( -1 );
+	public void shutdown(String reason) throws Exception {
+		System.err.println("Stop Agent service because of :" + reason);
+		System.exit(-1);
 	}
 
 	/**
@@ -894,23 +979,24 @@ public final class AgentNode extends Thread {
 	 * 
 	 * @param args
 	 */
-	@SuppressWarnings( "unused" )
-	public static void main( String[] args ) {
+	@SuppressWarnings("unused")
+	public static void main(String[] args) {
 		String uri = null;
-		if ( args == null || args.length == 0 ) {
-			File configFile = new File( Constants.MQ_CONFIG_FILE );
-			if( !configFile.exists() || !configFile.isFile() || configFile.length()==0 ) {
-				System.err.println( "Please start Testgrid Agent with assigned Messagq Broker Address. E.g.: tcp://10.220.120.16:61616, Or else set Message Service config info to mqservice.config in same folder." );
-				System.exit( 0 );
+		if (args == null || args.length == 0) {
+			File configFile = new File(Constants.MQ_CONFIG_FILE);
+			if (!configFile.exists() || !configFile.isFile() || configFile.length() == 0) {
+				System.err
+						.println("Please start Testgrid Agent with assigned Messagq Broker Address. E.g.: tcp://10.220.120.16:61616, Or else set Message Service config info to mqservice.config in same folder.");
+				System.exit(0);
 			}
-		}else{
+		} else {
 			uri = args[0];
 		}
 		try {
-			final AgentNode node = new AgentNode( uri );
-		} catch ( Exception e ) {
+			final AgentNode node = new AgentNode(uri);
+		} catch (Exception e) {
 			e.printStackTrace();
-			System.exit( -1 );
+			System.exit(-1);
 		}
 	}
 }

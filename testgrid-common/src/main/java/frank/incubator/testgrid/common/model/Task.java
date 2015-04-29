@@ -7,32 +7,32 @@ public class Task extends BaseObject {
 	private String taskOwner;
 	private long created;
 	private TestSuite testsuite;
-	private DeviceRequirement requirements;
 	private Phase phase;
 	private long startTime = 0L;
 	private long endTime = 0L;
+	private boolean sendOutput = false;
 
 	public Task() {
 		created = System.currentTimeMillis();
-		this.id = "Task_" + created + "_" + CommonUtils.generateToken( 5 );
+		this.id = "Task_" + created + "_" + CommonUtils.generateToken(5);
 	}
 
-	public Task( String id ) {
+	public Task(String id) {
 		this.id = id;
 		created = System.currentTimeMillis();
 	}
 
 	@Override
-	public void setId( String id ) {
-		if ( testsuite != null )
-			for ( Test t : testsuite.getTests() ) {
-				t.setTaskID( this.id );
+	public void setId(String id) {
+		if (testsuite != null)
+			for (Test t : testsuite.getTests()) {
+				t.setTaskID(this.id);
 			}
-		this.id=  id;
-		if( this.testsuite != null ) {
-			if( testsuite.getTests() != null ) {
-				for( Test t : testsuite.getTests() ) {
-					t.setTaskID( id );
+		this.id = id;
+		if (this.testsuite != null) {
+			if (testsuite.getTests() != null) {
+				for (Test t : testsuite.getTests()) {
+					t.setTaskID(id);
 				}
 			}
 		}
@@ -42,7 +42,7 @@ public class Task extends BaseObject {
 		return taskOwner;
 	}
 
-	public void setTaskOwner( String taskOwner ) {
+	public void setTaskOwner(String taskOwner) {
 		this.taskOwner = taskOwner;
 	}
 
@@ -50,41 +50,46 @@ public class Task extends BaseObject {
 		return created;
 	}
 
-	public DeviceRequirement getRequirements() {
-		return requirements;
+	public boolean isSendOutput() {
+		return sendOutput;
 	}
 
-	public void setRequirements( DeviceRequirement requirements ) {
-		this.requirements = requirements;
+	public void setSendOutput(boolean sendOutput) {
+		this.sendOutput = sendOutput;
+		if(this.getTestsuite() != null && this.getTestsuite().getTests() != null) {
+			for(Test t : this.getTestsuite().getTests()) {
+				t.setSendOutput(sendOutput);
+			}
+		}
 	}
 
 	public TestSuite getTestsuite() {
 		return testsuite;
 	}
 
-	public void setTestsuite( TestSuite testsuite ) {
+	public void setTestsuite(TestSuite testsuite) {
 		this.testsuite = testsuite;
-		for ( Test t : testsuite.getTests() ) {
-			t.setTaskID( this.id );
+		for (Test t : testsuite.getTests()) {
+			t.setTaskID(this.id);
 		}
 	}
-	
+
 	public Phase getPhase() {
 		return phase;
 	}
 
-	public void setPhase( Phase phase ) {
-		if( phase != this.phase )
+	public void setPhase(Phase phase) {
+		if (phase != this.phase)
 			this.setChanged();
 		this.phase = phase;
-		if ( phase == Phase.FINISHED ){
-			setEndTime( System.currentTimeMillis() );
+		if (phase == Phase.FINISHED) {
+			setEndTime(System.currentTimeMillis());
 		}
 		this.notifyObservers();
 	}
 
-	public enum Phase{
-		PUBLISHED,STARTED,FINISHED //,CANCELLED, FAILED
+	public enum Phase {
+		PUBLISHED, STARTED, FINISHED // ,CANCELLED, FAILED
 	}
 
 	public long getEndTime() {

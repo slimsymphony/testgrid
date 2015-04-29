@@ -1,8 +1,11 @@
 package frank.incubator.testgrid.agent.plugin;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.WatchEvent;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -12,16 +15,19 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+
 import frank.incubator.testgrid.agent.device.DeviceManager;
 import frank.incubator.testgrid.common.StatusChangeNotifier;
+import frank.incubator.testgrid.common.file.FileWatchService;
 import frank.incubator.testgrid.common.log.LogUtils;
 import frank.incubator.testgrid.common.message.Pipe;
 import frank.incubator.testgrid.common.plugin.PluginPermission;
 import frank.incubator.testgrid.common.plugin.TestGridPlugin;
 
 /**
- * Base Class for all the AbstractAgentPlugin. Done basic resource setup and initial
- * process. Inherited classes, please be caution that it should keep the constructor have no parameters.
+ * Base Class for all the AbstractAgentPlugin. Done basic resource setup and
+ * initial process. Inherited classes, please be caution that it should keep the
+ * constructor have no parameters.
  * 
  * @author Wang Frank
  * 
@@ -47,14 +53,16 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	protected ListenableFuture<V> result;
 
 	protected ListeningScheduledExecutorService pluginPool;
-	
+
 	protected String[] events;
-	
+
 	protected StatusChangeNotifier notifier;
-	
-	protected Map<String,Object> attributes;
-	
+
+	protected Map<String, Object> attributes;
+
 	protected int state = TestGridPlugin.IDLE;
+	
+	protected FileWatchService watcher;
 
 	public AbstractAgentPlugin() {
 	}
@@ -68,12 +76,12 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 		return unit;
 	}
 
-	public void setSchedule( TimeUnit schedule ) {
+	public void setSchedule(TimeUnit schedule) {
 		this.unit = schedule;
 	}
 
-	public Pipe getPipe( String pipeName ) {
-		return pipes.get( pipeName );
+	public Pipe getPipe(String pipeName) {
+		return pipes.get(pipeName);
 	}
 
 	public DeviceManager getDm() {
@@ -92,7 +100,7 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 		return delay;
 	}
 
-	public void setDelay( long delay ) {
+	public void setDelay(long delay) {
 		this.delay = delay;
 	}
 
@@ -100,7 +108,7 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 		return workspace;
 	}
 
-	public void setWorkspace( File workspace ) {
+	public void setWorkspace(File workspace) {
 		this.workspace = workspace;
 	}
 
@@ -108,27 +116,27 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 		return pluginPool;
 	}
 
-	public void setPluginPool( ListeningScheduledExecutorService pluginPool ) {
+	public void setPluginPool(ListeningScheduledExecutorService pluginPool) {
 		this.pluginPool = pluginPool;
 	}
 
-	public void setName( String name ) {
+	public void setName(String name) {
 		this.name = name;
 	}
 
-	public void setPermissions( PluginPermission[] permissions ) {
+	public void setPermissions(PluginPermission[] permissions) {
 		this.permissions = permissions;
 	}
 
-	public void setPipes( Map<String, Pipe> pipes ) {
+	public void setPipes(Map<String, Pipe> pipes) {
 		this.pipes = pipes;
 	}
 
-	public void setDm( DeviceManager dm ) {
+	public void setDm(DeviceManager dm) {
 		this.dm = dm;
 	}
 
-	public void setLog( Logger log ) {
+	public void setLog(Logger log) {
 		this.log = log;
 	}
 
@@ -136,7 +144,7 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 		return notifier;
 	}
 
-	public void setNotifier( StatusChangeNotifier notifier ) {
+	public void setNotifier(StatusChangeNotifier notifier) {
 		this.notifier = notifier;
 	}
 
@@ -144,7 +152,7 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 		return events;
 	}
 
-	public void setEvents( String[] events ) {
+	public void setEvents(String[] events) {
 		this.events = events;
 	}
 
@@ -152,8 +160,8 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	public ListenableFuture<V> getResult() {
 		return result;
 	}
-	
-	public void setResult( ListenableFuture<V> result ) {
+
+	public void setResult(ListenableFuture<V> result) {
 		this.result = result;
 	}
 
@@ -166,15 +174,26 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 		return attributes;
 	}
 
-	public void setAttributes( Map<String, Object> attributes ) {
+	public void setAttributes(Map<String, Object> attributes) {
 		this.attributes = attributes;
 	}
-
+	
+	public Object getAttribute(String key) {
+		return attributes.get(key);
+	}
+	
+	public Object getAttribute(String key, Object defaultValue) {
+		Object ret = attributes.get(key);
+		if(ret == null)
+			return defaultValue;
+		return ret;
+	}
+	
 	public TimeUnit getUnit() {
 		return unit;
 	}
 
-	public void setUnit( TimeUnit unit ) {
+	public void setUnit(TimeUnit unit) {
 		this.unit = unit;
 	}
 
@@ -182,30 +201,54 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 		return state;
 	}
 
-	public void setState( int state ) {
+	public void setState(int state) {
 		this.state = state;
 	}
 
+	public FileWatchService getWatcher() {
+		return watcher;
+	}
+
+	public void setWatcher(FileWatchService watcher) {
+		this.watcher = watcher;
+	}
+
+	
+	@Override
+	public V call() throws Exception {
+		return null;
+	}
+	
 	/**
 	 * EntryPoint of a plugin.
 	 */
-	@SuppressWarnings( "unchecked" )
+	//@SuppressWarnings("unchecked")
+	@SuppressWarnings("unchecked")
 	public void start() {
 		boolean execEnable = false;
-		for( PluginPermission p : permissions ) {
-			if( p.equals( PluginPermission.EXECUTE_SCHEDULED_OPERATION )) {
+		for (PluginPermission p : permissions) {
+			if (p.equals(PluginPermission.EXECUTE_SCHEDULED_OPERATION)) {
 				execEnable = true;
 				break;
 			}
 		}
-		
-		if( execEnable ) {
-			if( pluginPool == null )
-				pluginPool = MoreExecutors.listeningDecorator( Executors.newScheduledThreadPool( 1 ) );
-			result = (ListenableFuture<V>)pluginPool.scheduleAtFixedRate( this, 1, delay, unit );
-			Futures.addCallback( result, this );
+
+		if (execEnable) {
+			if (pluginPool == null)
+				pluginPool = MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(1));
+			final AbstractAgentPlugin<V> put = this;
+			result = (ListenableFuture<V>) pluginPool.scheduleAtFixedRate(new Runnable() {
+				@Override
+				public void run() {
+					pluginPool.schedule(put, 0, unit);
+				}}, 1, delay, unit);
+			Futures.addCallback(result, this);
 		}
-		this.setState( TestGridPlugin.STARTED );
+		
+		if(this.watcher != null) {
+			watcher.start();
+		}
+		this.setState(TestGridPlugin.STARTED);
 	}
 
 	/**
@@ -213,15 +256,15 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	 */
 	@Override
 	public void suspend() {
-		if( pluginPool != null ) {
+		if (pluginPool != null) {
 			pluginPool.shutdown();
 			int count = 0;
-			while( !pluginPool.isTerminated() ) {
+			while (!pluginPool.isTerminated()) {
 				try {
-					TimeUnit.SECONDS.sleep( 1 );
-				} catch ( InterruptedException e ) {
-					if( count < 3  )
-						count ++;
+					TimeUnit.SECONDS.sleep(1);
+				} catch (InterruptedException e) {
+					if (count < 3)
+						count++;
 					else {
 						pluginPool.shutdownNow();
 					}
@@ -229,24 +272,31 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 			}
 			pluginPool = null;
 		}
-		this.setState( TestGridPlugin.IDLE );
+		if(this.watcher != null) {
+			watcher.pause();
+		}
+		this.setState(TestGridPlugin.IDLE);
 	}
 
 	/**
 	 * Dispose Managed resource after user defined dispose();
+	 * 
 	 * @see frank.incubator.testgrid.common.plugin.TestGridPlugin#uninstall()
 	 */
 	@Override
 	public void deactive() {
-		if( pluginPool != null ) {
+		if(this.watcher != null) {
+			watcher.dispose();
+		}
+		if (pluginPool != null) {
 			pluginPool.shutdown();
 			int count = 0;
-			while( !pluginPool.isTerminated() ) {
+			while (!pluginPool.isTerminated()) {
 				try {
-					TimeUnit.SECONDS.sleep( 1 );
-				} catch ( InterruptedException e ) {
-					if( count < 3  )
-						count ++;
+					TimeUnit.SECONDS.sleep(1);
+				} catch (InterruptedException e) {
+					if (count < 3)
+						count++;
 					else {
 						pluginPool.shutdownNow();
 					}
@@ -254,23 +304,24 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 			}
 			pluginPool = null;
 		}
-		
+
 		dm = null;
 		workspace = null;
-		if( pipes != null )
+		if (pipes != null)
 			pipes.clear();
-		
-		if( events != null && notifier!= null ) {
-			Collection<Runnable> runs = null;
-			for( String event : events ) {
-				runs =  notifier.getEventListeners().get( event );
-				runs.remove( this );
+
+		if (events != null && notifier != null) {
+			@SuppressWarnings("rawtypes")
+			Collection<Callable> runs = null;
+			for (String event : events) {
+				runs = notifier.getEventListeners().get(event);
+				runs.remove(this);
 			}
 		}
 		this.permissions = null;
-		LogUtils.dispose( log );
-		this.setState( TestGridPlugin.STOPPED );
-		PluginManager.plugins.remove( this.name );
+		LogUtils.dispose(log);
+		this.setState(TestGridPlugin.STOPPED);
+		PluginManager.plugins.remove(this.name);
 	}
 
 	/**
@@ -279,30 +330,30 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	 * @param delay
 	 * @param unit
 	 */
-	public void changeSchedule( long delay, TimeUnit unit ) {
-		this.setDelay( delay );
-		this.setSchedule( unit );
-		if( pluginPool != null ) {
-			if( !pluginPool.isShutdown() )
+	public void changeSchedule(long delay, TimeUnit unit) {
+		this.setDelay(delay);
+		this.setSchedule(unit);
+		if (pluginPool != null) {
+			if (!pluginPool.isShutdown())
 				pluginPool.shutdown();
 			int count = 0;
-			while( !pluginPool.isTerminated() ) {
+			while (!pluginPool.isTerminated()) {
 				try {
-					TimeUnit.SECONDS.sleep( 1 );
-				} catch ( InterruptedException e ) {
-					if( count < 3  )
-						count ++;
+					TimeUnit.SECONDS.sleep(1);
+				} catch (InterruptedException e) {
+					if (count < 3)
+						count++;
 					else {
 						pluginPool.shutdownNow();
 					}
 				}
 			}
 			pluginPool = null;
-			if( this.getState() == STARTED )
+			if (this.getState() == STARTED)
 				start();
 		}
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -310,6 +361,9 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	 */
 	@Override
 	public void init() {
+		if(this.watcher != null) {
+			watcher.start();
+		}
 	}
 
 	/*
@@ -319,5 +373,21 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	 */
 	@Override
 	public void dispose() {
+	}
+	
+	@Override
+	public void onSuccess(V result) {
+	}
+
+	@Override
+	public void onFailure(Throwable t) {
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see frank.incubator.testgrid.common.plugin.TestGridPlugin#doWatch()
+	 */
+	@Override
+	public void doWatch(WatchEvent<Path> event, Path path) {
 	}
 }

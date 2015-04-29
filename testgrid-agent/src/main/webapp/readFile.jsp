@@ -1,4 +1,8 @@
-<%@page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%><%@page import="org.apache.commons.io.IOUtils"%><%@page import="frank.incubator.testgrid.agent.*"%><%@page import="java.io.*"%><%@page import="frank.incubator.testgrid.common.*"%><%
+<%@page language="java" contentType="text/html; charset=utf-8"
+	pageEncoding="utf-8"%><%@page import="org.apache.commons.io.IOUtils"%><%@page
+	import="frank.incubator.testgrid.agent.*"%><%@page import="java.io.*"%><%@page
+	import="frank.incubator.testgrid.common.*"%>
+<%
 String filename = request.getParameter("filename");
 AgentNode agent = (AgentNode)HttpServer.getAppRef();
 File logFolder = new File(agent.getWorkspace().getParentFile(), "logs");

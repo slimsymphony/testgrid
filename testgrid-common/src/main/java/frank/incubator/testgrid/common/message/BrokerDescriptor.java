@@ -9,17 +9,20 @@ import frank.incubator.testgrid.common.model.BaseObject;
 public class BrokerDescriptor extends BaseObject {
 	private String uri;
 	private MqBuilder mq;
-	
+
 	public String getUri() {
 		return uri;
 	}
-	public void setUri( String uri ) {
+
+	public void setUri(String uri) {
 		this.uri = uri;
 	}
+
 	public MqBuilder getMq() {
 		return mq;
 	}
-	public void setMq( MqBuilder mqType ) {
+
+	public void setMq(MqBuilder mqType) {
 		this.mq = mqType;
 	}
 }

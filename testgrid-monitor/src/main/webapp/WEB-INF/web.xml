@@ -14,7 +14,7 @@
         <servlet-class>frank.incubator.testgrid.monitor.InitializationServlet</servlet-class>
         <init-param>
             <param-name>mqUri</param-name>
-            <param-value>LocalPilot*tcp://localhost:61617</param-value>
+            <param-value>LocalPilot*tcp://127.0.0.1:61616</param-value>
             <!-- <param-value>Sandbox*tcp://10.220.120.10.com:61617;Production*failover:(tcp://10.220.116.240:61617,tcp://10.220.116.242:61617)</param-value> -->
         </init-param>
         <init-param>

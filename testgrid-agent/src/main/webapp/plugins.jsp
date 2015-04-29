@@ -27,13 +27,14 @@ body {
 	font-size: 12pt;
 	font-family: "Courier New";
 }
-textarea{
+
+textarea {
 	width: 60%;
-height: 80px;
-overflow: scroll; 
-overflow-y: scroll; 
-overflow-x: scroll; 
-overflow:-moz-scrollbars-vertical;
+	height: 80px;
+	overflow: scroll;
+	overflow-y: scroll;
+	overflow-x: scroll;
+	overflow: -moz-scrollbars-vertical;
 }
 </style>
 <script type="text/javascript">
@@ -119,7 +120,8 @@ function changeSchedule(id){
 		<span>Available Plugins</span>
 		<ul>
 			<%for( PluginManager.PluginDescriptor pd : pds.values( ) ) {%>
-			<li><%= pd.getPluginName() %> <input type="button" value="enable" onclick="start('<%=pd.getPluginName() %>')" /></li>
+			<li><%= pd.getPluginName() %> <input type="button"
+				value="enable" onclick="start('<%=pd.getPluginName() %>')" /></li>
 			<%} %>
 		</ul>
 		<ul>
@@ -128,22 +130,21 @@ function changeSchedule(id){
 			for ( String pn : PluginManager.plugins.keySet(  ) ) {
 				plugin = (AbstractAgentPlugin<?>)PluginManager.plugins.get( pn );
 			%>
-			<li id="li<%=pn%>">
-				<span id="span<%=pn%>" style="color: blue;font-size:16pt;"><%= pn%></span> 
+			<li id="li<%=pn%>"><span id="span<%=pn%>"
+				style="color: blue; font-size: 16pt;"><%= pn%></span>
 				<ul>
 					<% for( PluginPermission pp : plugin.getPermissions() ){ %>
 					<li><%= pp %></li>
 					<% } %>
-				</ul>
-				<span>Delay: </span><input id="delay<%= pn %>" value="<%= plugin.getDelay()%>" /><br/>
-				<span>User-Defined:</span><br/>
-				<textarea id="atts<%=pn%>"><%=CommonUtils.toJson( plugin.getAttributes() ) %></textarea><br/>
-				<input onclick="start('<%=pn%>')" type="button" value="start" /> 
-				<input onclick="stop('<%=pn%>')" type="button" value="suspend" />
-				<input onclick="reconfig('<%=pn%>')" type="button" value="reconfig" />
-				<input onclick="changeSchedule('<%=pn%>')" type="button" value="change Schedule" />
-				<input onclick="plugout('<%=pn%>')" type="button" value="deactive" />
-			</li>
+				</ul> <span>Delay: </span><input id="delay<%= pn %>"
+				value="<%= plugin.getDelay()%>" /><br /> <span>User-Defined:</span><br />
+				<textarea id="atts<%=pn%>"><%=CommonUtils.toJson( plugin.getAttributes() ) %></textarea><br />
+				<input onclick="start('<%=pn%>')" type="button" value="start" /> <input
+				onclick="stop('<%=pn%>')" type="button" value="suspend" /> <input
+				onclick="reconfig('<%=pn%>')" type="button" value="reconfig" /> <input
+				onclick="changeSchedule('<%=pn%>')" type="button"
+				value="change Schedule" /> <input onclick="plugout('<%=pn%>')"
+				type="button" value="deactive" /></li>
 			<%
 			}
 			%>
@@ -151,7 +152,8 @@ function changeSchedule(id){
 	</div>
 	<br />
 	<br />
-	<a href="index.jsp">back home</a><br/>
+	<a href="index.jsp">back home</a>
+	<br />
 	<footer>
 		<a href="solarsystem.html">Welcome to use test grid</a>
 	</footer>

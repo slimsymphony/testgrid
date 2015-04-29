@@ -11,16 +11,16 @@ import frank.incubator.testgrid.common.log.LogUtils;
 
 public class HttpServer {
 
-	private LogConnector log = LogUtils.get( "Http" );
+	private LogConnector log = LogUtils.get("Http");
 
-	public HttpServer( Object appReference, int port ) {
+	public HttpServer(Object appReference, int port) {
 		this.servicePort = port;
 		appRef = appReference;
 	}
 
 	private int servicePort;
 	private Server server;
-	private ExecutorService pool = Executors.newFixedThreadPool( 1 );
+	private ExecutorService pool = Executors.newFixedThreadPool(1);
 	private static Object appRef;
 
 	public static Object getAppRef() {
@@ -28,42 +28,42 @@ public class HttpServer {
 	}
 
 	public void stop() {
-		if ( server != null ) {
-			if ( !server.isStopped() && !server.isStopping() ) {
+		if (server != null) {
+			if (!server.isStopped() && !server.isStopping()) {
 				try {
 					server.stop();
-					log.info( "Http service have been stopped." );
-				} catch ( Exception e ) {
-					log.error( "Stop Http service failed.", e );
+					log.info("Http service have been stopped.");
+				} catch (Exception e) {
+					log.error("Stop Http service failed.", e);
 				}
 			}
 		}
 	}
 
 	public void start() {
-		pool.execute( new Runnable() {
+		pool.execute(new Runnable() {
 			public void run() {
 				try {
-					if ( server != null && server.isStarted() ) {
+					if (server != null && server.isStarted()) {
 						try {
 							server.stop();
-						} catch ( Exception ex ) {
-							log.error( "Stop server before restart service got exception.", ex );
+						} catch (Exception ex) {
+							log.error("Stop server before restart service got exception.", ex);
 						}
 					}
-					server = new Server( servicePort );
+					server = new Server(servicePort);
 					WebAppContext webapp = new WebAppContext();
-					webapp.setContextPath( "/" );
-					webapp.setResourceBase( "src/main/webapp/" );
-					webapp.setDescriptor( "WEB-INF/web.xml" );
-					server.setHandler( webapp );
+					webapp.setContextPath("/");
+					webapp.setResourceBase("src/main/webapp/");
+					webapp.setDescriptor("WEB-INF/web.xml");
+					server.setHandler(webapp);
 					server.start();
 					server.join();
-					log.info( "Http service have been started on port:" + servicePort );
-				} catch ( Exception ex ) {
-					log.error( "Start Http service container failed.", ex );
+					log.info("Http service have been started on port:" + servicePort);
+				} catch (Exception ex) {
+					log.error("Start Http service container failed.", ex);
 				}
 			}
-		} );
+		});
 	}
 }

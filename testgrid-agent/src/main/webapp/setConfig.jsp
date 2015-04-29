@@ -93,11 +93,11 @@ function del(id){
 			<%
 				for ( Object obj : props.keySet() ) {
 			%>
-			<li id="li<%=obj%>">
-				<span id="span<%=obj%>" style="font-color: grey"><%= obj%></span> - <input id="prop<%=obj%>" type="text" value="<%=props.getProperty( ( String ) obj )%>" />
-				<input onclick="update('<%=obj%>')" type="button" value="update" /> 
-				<input onclick="del('<%=obj%>')" type="button" value="delete" />
-			</li>
+			<li id="li<%=obj%>"><span id="span<%=obj%>"
+				style="font-color: grey"><%= obj%></span> - <input id="prop<%=obj%>"
+				type="text" value="<%=props.getProperty( ( String ) obj )%>" /> <input
+				onclick="update('<%=obj%>')" type="button" value="update" /> <input
+				onclick="del('<%=obj%>')" type="button" value="delete" /></li>
 			<%
 				}
 			%>
@@ -105,7 +105,8 @@ function del(id){
 	</div>
 	<br />
 	<br />
-	<a href="index.jsp">back home</a><br/>
+	<a href="index.jsp">back home</a>
+	<br />
 	<footer>
 		<a href="solarsystem.html">Welcome to use test grid</a>
 	</footer>

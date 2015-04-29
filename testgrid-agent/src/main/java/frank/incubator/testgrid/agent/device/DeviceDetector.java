@@ -17,7 +17,7 @@ import frank.incubator.testgrid.common.model.Device;
 
 public abstract class DeviceDetector extends Thread {
 
-	protected LogConnector log = LogUtils.get( "DeviceDetector" );
+	protected LogConnector log = LogUtils.get("DeviceDetector");
 	/**
 	 * Handler of all discovered products.
 	 */
@@ -26,80 +26,76 @@ public abstract class DeviceDetector extends Thread {
 	public long waitingSchedule = Constants.ONE_SECOND * 30;
 	protected File workspace;
 
-	public DeviceDetector( File workspace, DeviceManager deviceExplorer, long scanInterval ) {
+	public DeviceDetector(File workspace, DeviceManager deviceExplorer, long scanInterval) {
 		this.workspace = workspace;
 		this.deviceManager = deviceExplorer;
 		this.waitingSchedule = scanInterval;
-		this.setName( "DeviceDetector" );
+		this.setName("DeviceDetector");
 		DeviceConfigFileWatcher dcfw;
 		try {
-			dcfw = new DeviceConfigFileWatcher( workspace.toPath(), this, "properties" );
+			dcfw = new DeviceConfigFileWatcher(workspace.toPath(), this, "properties");
 			dcfw.start();
-		} catch ( IOException e ) {
-			log.error( "Start Device Config file watcher failed.", e );
+		} catch (IOException e) {
+			log.error("Start Device Config file watcher failed.", e);
 		}
 	}
 
-	@SuppressWarnings( "unchecked" )
-	protected void loadUserDefined( Device device ) {
+	protected void loadUserDefined(Device device) {
 		BufferedReader reader = null;
-		File file = new File( workspace, ( String ) device.getAttribte( Constants.DEVICE_SN ) + ".properties" );
+		File file = new File(workspace, (String) device.getAttribute(Constants.DEVICE_SN) + ".properties");
 		try {
-			if ( !file.exists() ) {
-				log.info( "configuration file didn't exist for device[" + device.toString() + "], created a empty one." );
+			if (!file.exists()) {
+				log.info("configuration file didn't exist for device[" + device.toString() + "], created a empty one.");
 				file.createNewFile();
 			} else {
-				reader = new BufferedReader( new FileReader( file ) );
+				reader = new BufferedReader(new FileReader(file));
 				Properties p = new Properties();
-				p.load( reader );
+				p.load(reader);
 				String key = null;
-				for( Entry<Object,Object> entry :  p.entrySet() ) {
-					key = ((String)entry.getKey()).trim();
-					if( key.trim().startsWith( "#" ) ) {
+				for (Entry<Object, Object> entry : p.entrySet()) {
+					key = ((String) entry.getKey()).trim();
+					if (key.trim().startsWith("#")) {
 						continue;
 					}
-					if ( key.startsWith( Constants.DEVICE_EXCLUDE_PREFIX ) )
-						device.addExclusiveAttribute( key, entry.getValue() );
+					if (key.startsWith(Constants.DEVICE_EXCLUDE_PREFIX))
+						device.addExclusiveAttribute(key, entry.getValue());
 					else
-						device.addAttribute( key.trim(), entry.getValue() );
+						device.addAttribute(key.trim(), entry.getValue());
 				}
 
-				/*String line = null;
-				while ( ( line = reader.readLine() ) != null ) {
-					if ( line.trim().isEmpty() )
-						continue;
-					int idx = line.indexOf( '=' );
-					String key = line.substring( 0, idx );
-					String value = line.substring( idx + 1 );
-					if ( key.startsWith( "#" ) )
-						continue;
-					if ( key.startsWith( Constants.DEVICE_EXCLUDE_PREFIX ) )
-						device.addExclusiveAttribute( key, value );
-					else
-						device.addAttribute( key.trim(), value.trim() );
-				}*/
+				/*
+				 * String line = null; while ( ( line = reader.readLine() ) !=
+				 * null ) { if ( line.trim().isEmpty() ) continue; int idx =
+				 * line.indexOf( '=' ); String key = line.substring( 0, idx );
+				 * String value = line.substring( idx + 1 ); if (
+				 * key.startsWith( "#" ) ) continue; if ( key.startsWith(
+				 * Constants.DEVICE_EXCLUDE_PREFIX ) )
+				 * device.addExclusiveAttribute( key, value ); else
+				 * device.addAttribute( key.trim(), value.trim() ); }
+				 */
 			}
-		} catch ( FileNotFoundException e ) {
-			log.error( "Didn't find the device file:" + file.getAbsolutePath(), e );
-		} catch ( Exception ex ) {
-			log.error( "load and combine user-defined attribute for device[" + device + "] failed. persistence file:" + file.getAbsolutePath(), ex );
+		} catch (FileNotFoundException e) {
+			log.error("Didn't find the device file:" + file.getAbsolutePath(), e);
+		} catch (Exception ex) {
+			log.error("load and combine user-defined attribute for device[" + device + "] failed. persistence file:"
+					+ file.getAbsolutePath(), ex);
 		} finally {
-			CommonUtils.closeQuietly( reader );
+			CommonUtils.closeQuietly(reader);
 		}
 	}
-	
+
 	@Override
 	public void run() {
-		log.debug( "DeviceDetector Start!" );
-		while ( running ) {
+		log.debug("DeviceDetector Start!");
+		while (running) {
 			try {
 				refresh();
-				TimeUnit.MILLISECONDS.sleep( waitingSchedule );
-			} catch ( Exception e ) {
-				log.error( "DeviceDetector met exception when refreshing devices status.", e );
+				TimeUnit.MILLISECONDS.sleep(waitingSchedule);
+			} catch (Exception e) {
+				log.error("DeviceDetector met exception when refreshing devices status.", e);
 			}
 		}
-		log.debug( "DeviceDetector Stop!" );
+		log.debug("DeviceDetector Stop!");
 	}
 
 	public abstract void refresh();

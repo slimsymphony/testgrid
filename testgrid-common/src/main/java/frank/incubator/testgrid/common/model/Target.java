@@ -7,7 +7,7 @@ public abstract class Target extends BaseObject {
 		return host;
 	}
 
-	public void setHost( String host ) {
+	public void setHost(String host) {
 		this.host = host;
 	}
 }

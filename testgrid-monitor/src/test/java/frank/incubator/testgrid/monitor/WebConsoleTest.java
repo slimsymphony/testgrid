@@ -60,7 +60,7 @@ public class WebConsoleTest {
 		MonitorCache.updateTest( test );
 		*/
 		if(args == null)
-			args = new String[] {"uri=tcp://10.220.120.16:61616"};
+			args = new String[] {"uri=tcp://10.32.207.162:61616"};
 		WebConsoleBootstrap instance = new WebConsoleBootstrap( args );
 		instance.setDaemon( true );
 		instance.start();

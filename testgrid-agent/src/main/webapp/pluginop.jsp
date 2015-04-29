@@ -1,4 +1,10 @@
-<%@page import="com.google.gson.reflect.TypeToken"%><%@page import="java.util.concurrent.TimeUnit"%><%@page import="java.util.Map"%><%@page import="frank.incubator.testgrid.agent.*"%><%@page import="frank.incubator.testgrid.common.*"%><%@page import="frank.incubator.testgrid.agent.plugin.*"%><%@page import="frank.incubator.testgrid.common.plugin.*"%><%AgentNode agent = (AgentNode)HttpServer.getAppRef();
+<%@page import="com.google.gson.reflect.TypeToken"%><%@page
+	import="java.util.concurrent.TimeUnit"%><%@page import="java.util.Map"%><%@page
+	import="frank.incubator.testgrid.agent.*"%><%@page
+	import="frank.incubator.testgrid.common.*"%><%@page
+	import="frank.incubator.testgrid.agent.plugin.*"%><%@page
+	import="frank.incubator.testgrid.common.plugin.*"%>
+<%AgentNode agent = (AgentNode)HttpServer.getAppRef();
 String pluginName = request.getParameter("pluginName");
 AbstractAgentPlugin plugin = (AbstractAgentPlugin)PluginManager.getPlugin( pluginName );
 String op = request.getParameter("op");

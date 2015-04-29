@@ -1,4 +1,8 @@
-<%@page import="frank.incubator.testgrid.agent.*"%><%@page import="frank.incubator.testgrid.agent.device.*"%><%@page import="frank.incubator.testgrid.common.*"%><%@page import="frank.incubator.testgrid.common.model.*"%><%
+<%@page import="frank.incubator.testgrid.agent.*"%><%@page
+	import="frank.incubator.testgrid.agent.device.*"%><%@page
+	import="frank.incubator.testgrid.common.*"%><%@page
+	import="frank.incubator.testgrid.common.model.*"%>
+<%
 AgentNode agent = (AgentNode)HttpServer.getAppRef();
 DeviceManager dm = agent.getDm();
 String operation = request.getParameter("op");

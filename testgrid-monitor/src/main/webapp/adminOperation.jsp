@@ -1,5 +1,6 @@
 <%@page import="org.apache.commons.lang3.StringUtils"%>
-<%@page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
+<%@page language="java" contentType="text/html; charset=utf-8"
+	pageEncoding="utf-8"%>
 <%@page import="frank.incubator.testgrid.monitor.*"%>
 <%@page import="frank.incubator.testgrid.dm.*"%>
 <%@page import="frank.incubator.testgrid.common.model.*"%>

@@ -35,8 +35,8 @@ public class BufferedMessageOutputStream extends OutputStream {
 	private Session session;
 
 	private Logger log;
-	
-	private Map<String,Object> criteria = new HashMap<String, Object>();
+
+	private Map<String, Object> criteria = new HashMap<String, Object>();
 
 	private ScheduledExecutorService scheduledExecutorService = null;
 
@@ -50,100 +50,100 @@ public class BufferedMessageOutputStream extends OutputStream {
 	 */
 	private static int MSG_LENGTH = 4096;
 
-	public BufferedMessageOutputStream( Session s, MessageProducer p, String key, Object val ) {
+	public BufferedMessageOutputStream(Session s, MessageProducer p, String key, Object val) {
 		session = s;
 		producer = p;
 		useBuffer = false;
-		criteria.put( key, val );
-		log = LogUtils.getLogger( "MessageExporter" );
+		criteria.put(key, val);
+		log = LogUtils.getLogger("MessageExporter");
 	}
-	
-	public BufferedMessageOutputStream( Session s, MessageProducer p, String key, Object val, Logger log ) {
+
+	public BufferedMessageOutputStream(Session s, MessageProducer p, String key, Object val, Logger log) {
 		session = s;
 		producer = p;
 		useBuffer = false;
-		criteria.put( key, val );
+		criteria.put(key, val);
 		this.log = log;
 	}
-	
-	public BufferedMessageOutputStream( Session s, MessageProducer p, Map<String,Object> criteria ) {
-		this.criteria = criteria;  
+
+	public BufferedMessageOutputStream(Session s, MessageProducer p, Map<String, Object> criteria) {
+		this.criteria = criteria;
 		session = s;
 		producer = p;
 		useBuffer = false;
-		log = LogUtils.getLogger( "MessageExporter" );
+		log = LogUtils.getLogger("MessageExporter");
 	}
-	
-	public BufferedMessageOutputStream( Session s, MessageProducer p, Map<String,Object> criteria, Logger log ) {
-		this.criteria = criteria;  
+
+	public BufferedMessageOutputStream(Session s, MessageProducer p, Map<String, Object> criteria, Logger log) {
+		this.criteria = criteria;
 		session = s;
 		producer = p;
 		useBuffer = false;
 		this.log = log;
 	}
-	
-	public BufferedMessageOutputStream( Session s, MessageProducer p, int bufferSize ) {
-		this(s, p, bufferSize, 3,15, LogUtils.getLogger( "MessageExporter" ));
+
+	public BufferedMessageOutputStream(Session s, MessageProducer p, int bufferSize) {
+		this(s, p, bufferSize, 3, 15, LogUtils.getLogger("MessageExporter"));
 	}
-	
-	public BufferedMessageOutputStream( Session s, MessageProducer p, int bufferSize, Logger log ) {
-		this(s, p, bufferSize, 3,15, log);
+
+	public BufferedMessageOutputStream(Session s, MessageProducer p, int bufferSize, Logger log) {
+		this(s, p, bufferSize, 3, 15, log);
 	}
-	
-	public BufferedMessageOutputStream( Session s, MessageProducer p, int delayBeforeStart, int interval ) {
-		this(s, p, MSG_LENGTH, delayBeforeStart, interval, LogUtils.getLogger( "MessageExporter" ) );
+
+	public BufferedMessageOutputStream(Session s, MessageProducer p, int delayBeforeStart, int interval) {
+		this(s, p, MSG_LENGTH, delayBeforeStart, interval, LogUtils.getLogger("MessageExporter"));
 	}
-	
-	public BufferedMessageOutputStream( Session s, MessageProducer p, int delayBeforeStart, int interval, Logger log ) {
-		this(s, p, MSG_LENGTH, delayBeforeStart, interval, log );
+
+	public BufferedMessageOutputStream(Session s, MessageProducer p, int delayBeforeStart, int interval, Logger log) {
+		this(s, p, MSG_LENGTH, delayBeforeStart, interval, log);
 	}
-	
-	public BufferedMessageOutputStream( Session s, MessageProducer p, int bufferSize, int delayBeforeStart, int interval, Logger log ) {
+
+	public BufferedMessageOutputStream(Session s, MessageProducer p, int bufferSize, int delayBeforeStart,
+			int interval, Logger log) {
 		session = s;
 		producer = p;
 		MSG_LENGTH = bufferSize;
 		useBuffer = true;
 		this.log = log;
-		scheduledExecutorService = Executors.newScheduledThreadPool( 1 );
-		scheduledExecutorService.scheduleAtFixedRate( new Runnable() {
+		scheduledExecutorService = Executors.newScheduledThreadPool(1);
+		scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {
 				try {
 					flush();
-				} catch ( IOException e ) {
+				} catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
-		}, delayBeforeStart, interval, TimeUnit.SECONDS );
+		}, delayBeforeStart, interval, TimeUnit.SECONDS);
 	}
 
 	@Override
 	public void flush() throws IOException {
 		try {
-			if ( sb.length() > 0 && !sb.toString().trim().isEmpty() ) {
-				log.info( sb.toString() );
+			if (sb.length() > 0 && !sb.toString().trim().isEmpty()) {
+				log.info(sb.toString());
 				TextMessage msg = session.createTextMessage();
-				setProperty( msg, Constants.MSG_HEAD_FROM, Constants.MSG_TARGET_AGENT+CommonUtils.getHostName() );
-				setProperty( msg, Constants.MSG_HEAD_CONTENT, Constants.MSG_CONTENT_TEXT );
-				for( Entry<String, Object> entry : criteria.entrySet() ) {
-					msg.setObjectProperty( entry.getKey(), entry.getValue() );
+				setProperty(msg, Constants.MSG_HEAD_FROM, Constants.MSG_TARGET_AGENT + CommonUtils.getHostName());
+				setProperty(msg, Constants.MSG_HEAD_CONTENT, Constants.MSG_CONTENT_TEXT);
+				for (Entry<String, Object> entry : criteria.entrySet()) {
+					msg.setObjectProperty(entry.getKey(), entry.getValue());
 				}
-				msg.setText( sb.toString().trim() );
-				producer.send( msg );
+				msg.setText(sb.toString().trim());
+				producer.send(msg);
 				sb = new StringBuffer();
 			}
-		} catch ( Exception ex ) {
-			log.error( "export message info failed.", ex );
+		} catch (Exception ex) {
+			log.error("export message info failed.", ex);
 		}
 	}
 
 	@Override
-	public void write( int b ) throws IOException {
-		sb.append( (char)(b & 0xFF) );
-		if( b == '\n' ) {
-			if( useBuffer ) {
-				if( sb.length() > MSG_LENGTH )
-				{
+	public void write(int b) throws IOException {
+		sb.append((char) (b & 0xFF));
+		if (b == '\n') {
+			if (useBuffer) {
+				if (sb.length() > MSG_LENGTH) {
 					flush();
 				}
 			} else {
@@ -153,23 +153,22 @@ public class BufferedMessageOutputStream extends OutputStream {
 	}
 
 	@Override
-	public synchronized void write( byte b[] ) throws IOException {
-		String tx  = new String( b );
-		sb.append( tx );
-		if( useBuffer ) {
-			if( sb.length() > MSG_LENGTH )
-			{
+	public synchronized void write(byte b[]) throws IOException {
+		String tx = new String(b);
+		sb.append(tx);
+		if (useBuffer) {
+			if (sb.length() > MSG_LENGTH) {
 				flush();
 			}
 		} else {
 			flush();
 		}
 	}
-	
+
 	@Override
 	public void close() {
-		if( scheduledExecutorService != null && !scheduledExecutorService.isShutdown() )
+		if (scheduledExecutorService != null && !scheduledExecutorService.isShutdown())
 			scheduledExecutorService.shutdown();
-		LogUtils.dispose( log );
+		LogUtils.dispose(log);
 	}
 }

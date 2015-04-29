@@ -1,4 +1,5 @@
-<%@page import="java.io.*"%><%@page import="org.apache.commons.io.*"%><%
+<%@page import="java.io.*"%><%@page import="org.apache.commons.io.*"%>
+<%
 response.addHeader( "Pragma", "public" );
 response.addHeader( "Cache-Control", "max-age=86400" );
 response.addHeader( "Content-Type", "image/png" );

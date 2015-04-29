@@ -33,17 +33,17 @@ public class SqlDeviceManagerImpl implements DeviceManager {
 	
 	@Override
 	public void addDevice( final Device device ) throws DeviceManageException {
-		if( device == null || device.getAttribte( "imei" ) == null ) {
+		if( device == null || device.getAttribute( "imei" ) == null ) {
 			throw new DeviceManageException("Invalid Device provided for Adding.device="+device);
 		}
 		Connection conn = null;
 		PreparedStatement ps = null;
 		try {
 			@SuppressWarnings( "serial" )
-			List<Device> candidates = queryDevices( new HashMap<String,String>(){{this.put( "imei", (String)device.getAttribte( "imei" ) );}} );
+			List<Device> candidates = queryDevices( new HashMap<String,String>(){{this.put( "imei", (String)device.getAttribute( "imei" ) );}} );
 			if(candidates!=null && !candidates.isEmpty()) {
 				updateDevice( device );
-				log.debug( "Device[imei:"+device.getAttribte( "imei" )+"] have already been used, info updated." );
+				log.debug( "Device[imei:"+device.getAttribute( "imei" )+"] have already been used, info updated." );
 			}else {
 				conn = ServiceAdapter.getDbHelper().getConnection();
 				ps = conn.prepareStatement( "insert into devices( sn,rmcode,sw,hw,productcode,fingerprint,testnodeid,status,sim1number,sim2number," +
@@ -51,7 +51,7 @@ public class SqlDeviceManagerImpl implements DeviceManager {
 						"sim1pin1,sim1pin2,sim2pin1,sim2pin2,sim1puk1,sim1puk2,sim2puk1,sim2puk2,sim1signal,sim2signal,imei) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)" );
 				inject( device, ps );
 				ps.executeUpdate();
-				log.debug( "Device[imei:"+device.getAttribte( "imei" )+"] been added." );
+				log.debug( "Device[imei:"+device.getAttribute( "imei" )+"] been added." );
 			}
 		}catch(Exception ex) {
 			log.error( "Add Device got exception.", ex );
@@ -63,46 +63,46 @@ public class SqlDeviceManagerImpl implements DeviceManager {
 	}
 
 	private void inject( Device device, PreparedStatement ps ) throws SQLException {
-		ps.setString( 1, (String)device.getAttribte( "sn" ) );
-		ps.setString( 2, (String)device.getAttribte( "rmcode" ) );
-		ps.setString( 3, (String)device.getAttribte( "sw" ) );
-		ps.setString( 4, (String)device.getAttribte( "hw" ) );
-		ps.setString( 5, (String)device.getAttribte( "productcode" ) );
-		ps.setString( 6, (String)device.getAttribte( "fingerprint" ) );
-		if( device.getAttribte( "testnodeid" ) != null )
-			ps.setInt( 7, (Integer)device.getAttribte( "testnodeid" ) );
+		ps.setString( 1, (String)device.getAttribute( "sn" ) );
+		ps.setString( 2, (String)device.getAttribute( "rmcode" ) );
+		ps.setString( 3, (String)device.getAttribute( "sw" ) );
+		ps.setString( 4, (String)device.getAttribute( "hw" ) );
+		ps.setString( 5, (String)device.getAttribute( "productcode" ) );
+		ps.setString( 6, (String)device.getAttribute( "fingerprint" ) );
+		if( device.getAttribute( "testnodeid" ) != null )
+			ps.setInt( 7, (Integer)device.getAttribute( "testnodeid" ) );
 		else
 			ps.setInt( 7, 0 );
-		if( device.getAttribte( "status" ) == null )
+		if( device.getAttribute( "status" ) == null )
 			device.addAttribute( "status", Device.DEVICE_FREE );
-		ps.setInt( 8, (Integer)device.getAttribte( "status" ) );
-		ps.setString( 9, (String)device.getAttribte( "sim1number" ) );
-		ps.setString( 10, (String)device.getAttribte( "sim2number" ) );
-		if(device.getAttribte( "role" ) == null)
+		ps.setInt( 8, (Integer)device.getAttribute( "status" ) );
+		ps.setString( 9, (String)device.getAttribute( "sim1number" ) );
+		ps.setString( 10, (String)device.getAttribute( "sim2number" ) );
+		if(device.getAttribute( "role" ) == null)
 			device.addAttribute( "role", Device.ROLE_MAIN );
-		ps.setInt( 11, (Integer)device.getAttribte( "role" ) );
-		ps.setString( 12, (String)device.getAttribte( "sim1operator" ) );
-		ps.setString( 13, (String)device.getAttribte( "sim2operator" ) );
-		ps.setString( 14, (String)device.getAttribte( "sim1operatorcode" ) );
-		ps.setString( 15, (String)device.getAttribte( "sim2operatorcode" ) );
-		ps.setString( 16, (String)device.getAttribte( "sim1operatorcountry" ) );
-		ps.setString( 17, (String)device.getAttribte( "sim2operatorcountry" ) );
-		ps.setString( 18, (String)device.getAttribte( "sim1pin1" ) );
-		ps.setString( 19, (String)device.getAttribte( "sim1pin2" ) );
-		ps.setString( 20, (String)device.getAttribte( "sim2pin1" ) );
-		ps.setString( 21, (String)device.getAttribte( "sim2pin2" ) );
-		ps.setString( 22, (String)device.getAttribte( "sim1puk1" ) );
-		ps.setString( 23, (String)device.getAttribte( "sim1puk2" ) );
-		ps.setString( 24, (String)device.getAttribte( "sim2puk1" ) );
-		ps.setString( 25, (String)device.getAttribte( "sim2puk2" ) );
-		ps.setString( 26, (String)device.getAttribte( "sim1signal" ) );
-		ps.setString( 27, (String)device.getAttribte( "sim2signal" ) );
-		ps.setString( 28, (String)device.getAttribte( "imei" ) );
+		ps.setInt( 11, (Integer)device.getAttribute( "role" ) );
+		ps.setString( 12, (String)device.getAttribute( "sim1operator" ) );
+		ps.setString( 13, (String)device.getAttribute( "sim2operator" ) );
+		ps.setString( 14, (String)device.getAttribute( "sim1operatorcode" ) );
+		ps.setString( 15, (String)device.getAttribute( "sim2operatorcode" ) );
+		ps.setString( 16, (String)device.getAttribute( "sim1operatorcountry" ) );
+		ps.setString( 17, (String)device.getAttribute( "sim2operatorcountry" ) );
+		ps.setString( 18, (String)device.getAttribute( "sim1pin1" ) );
+		ps.setString( 19, (String)device.getAttribute( "sim1pin2" ) );
+		ps.setString( 20, (String)device.getAttribute( "sim2pin1" ) );
+		ps.setString( 21, (String)device.getAttribute( "sim2pin2" ) );
+		ps.setString( 22, (String)device.getAttribute( "sim1puk1" ) );
+		ps.setString( 23, (String)device.getAttribute( "sim1puk2" ) );
+		ps.setString( 24, (String)device.getAttribute( "sim2puk1" ) );
+		ps.setString( 25, (String)device.getAttribute( "sim2puk2" ) );
+		ps.setString( 26, (String)device.getAttribute( "sim1signal" ) );
+		ps.setString( 27, (String)device.getAttribute( "sim2signal" ) );
+		ps.setString( 28, (String)device.getAttribute( "imei" ) );
 	}
 
 	@Override
 	public void removeDevice( Device device ) throws DeviceManageException {
-		if(device == null || device.getAttribte( "imei" ) == null)
+		if(device == null || device.getAttribute( "imei" ) == null)
 			return;
 		Connection conn = null;
 		PreparedStatement ps = null;
@@ -110,7 +110,7 @@ public class SqlDeviceManagerImpl implements DeviceManager {
 		try {
 			conn = ServiceAdapter.getDbHelper().getConnection();
 			ps = conn.prepareStatement( sql );
-			ps.setString( 1, (String)device.getAttribte( "imei" ) );
+			ps.setString( 1, (String)device.getAttribute( "imei" ) );
 			ps.executeUpdate();
 			log.info( "Deleted device["+device+"] success." );
 		}catch(Exception ex) {
@@ -123,7 +123,7 @@ public class SqlDeviceManagerImpl implements DeviceManager {
 
 	@Override
 	public void updateDevice( Device device ) throws DeviceManageException {
-		if( device == null || device.getAttribte( "imei" ) == null ) {
+		if( device == null || device.getAttribute( "imei" ) == null ) {
 			throw new DeviceManageException("Invalid Device provided for Updating.device="+device);
 		}
 		Connection conn = null;

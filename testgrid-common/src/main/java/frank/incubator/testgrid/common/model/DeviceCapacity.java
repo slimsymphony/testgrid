@@ -3,21 +3,29 @@ package frank.incubator.testgrid.common.model;
 import frank.incubator.testgrid.common.CommonUtils;
 
 /**
- * Encapsulate the capacity in one Agent Node of assigned DeviceRequirement.
- * It contains how many sets of devices the current agent node device pool could provided.
- * And which include the available devices right now and busy devices which may release later. 
- *  
+ * Encapsulate the capacity in one Agent Node of assigned DeviceRequirement. It
+ * contains how many sets of devices the current agent node device pool could
+ * provided. And which include the available devices right now and busy devices
+ * which may release later.
+ * 
  * @author Wang Frank
  *
  */
 public class DeviceCapacity {
 
-	public DeviceCapacity( DeviceRequirement requirement ) {
+	public DeviceCapacity(DeviceRequirement requirement) {
 		this.requirement = requirement;
 	}
 	
+	public DeviceCapacity(String testId, DeviceRequirement requirement) {
+		this.testId = testId;
+		this.requirement = requirement;
+	}
+
 	DeviceRequirement requirement;
 	
+	private String testId;
+
 	int available;
 
 	int needWait;
@@ -26,7 +34,7 @@ public class DeviceCapacity {
 		return available;
 	}
 
-	public void setAvailable( int available ) {
+	public void setAvailable(int available) {
 		this.available = available;
 	}
 
@@ -34,7 +42,7 @@ public class DeviceCapacity {
 		return needWait;
 	}
 
-	public void setNeedWait( int needWait ) {
+	public void setNeedWait(int needWait) {
 		this.needWait = needWait;
 	}
 
@@ -42,11 +50,19 @@ public class DeviceCapacity {
 		return requirement;
 	}
 
-	public void setRequirement( DeviceRequirement requirement ) {
+	public void setRequirement(DeviceRequirement requirement) {
 		this.requirement = requirement;
 	}
 
+	public String getTestId() {
+		return testId;
+	}
+
+	public void setTestId(String testId) {
+		this.testId = testId;
+	}
+
 	public String toString() {
-		return CommonUtils.toJson( this );
+		return CommonUtils.toJson(this);
 	}
 }

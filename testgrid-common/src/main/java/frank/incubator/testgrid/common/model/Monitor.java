@@ -7,8 +7,8 @@ public class Monitor extends BaseObject {
 		return host;
 	}
 
-	public void setHost( String host ) {
+	public void setHost(String host) {
 		this.host = host;
 	}
-	
+
 }

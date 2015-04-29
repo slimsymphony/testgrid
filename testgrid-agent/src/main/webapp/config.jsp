@@ -1,4 +1,6 @@
-<%@page import="frank.incubator.testgrid.agent.*"%><%@page import="frank.incubator.testgrid.common.*"%><%
+<%@page import="frank.incubator.testgrid.agent.*"%><%@page
+	import="frank.incubator.testgrid.common.*"%>
+<%
 AgentNode agent = (AgentNode)HttpServer.getAppRef();
 String operation = request.getParameter("op");
 String key = request.getParameter("key");

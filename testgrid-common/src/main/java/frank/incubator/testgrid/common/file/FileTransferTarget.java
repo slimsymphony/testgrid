@@ -24,7 +24,7 @@ public interface FileTransferTarget extends FileTransferResource {
 	 * @return
 	 * @throws Exception
 	 */
-	Collection<File> fetch( String token, Map<String, Long> fileList, File localDestDir ) throws Exception;
+	Collection<File> fetch(String token, Map<String, Long> fileList, File localDestDir) throws Exception;
 
 	/**
 	 * Accepting Files be pushed from file source. Refer to
@@ -36,5 +36,5 @@ public interface FileTransferTarget extends FileTransferResource {
 	 * @return
 	 * @throws Exception
 	 */
-	Collection<File> accept( String token, Map<String, Long> fileList, File localDestDir ) throws Exception;
+	Collection<File> accept(String token, Map<String, Long> fileList, File localDestDir) throws Exception;
 }

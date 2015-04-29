@@ -65,7 +65,7 @@ public class SqliteTest {
 		try {
 			dm.updateDevice( d );
 			d = dm.queryDevices( new HashMap<String,Object>(){{this.put("imei","004402475336743");this.put( "status", Device.DEVICE_FREE );}} ).get( 0 );
-			Assert.assertEquals( "0.1402.2", d.getAttribte( "sw" ) );
+			Assert.assertEquals( "0.1402.2", d.getAttribute( "sw" ) );
 		} catch ( DeviceManageException e ) {
 			e.printStackTrace();
 			Assert.fail();

@@ -21,7 +21,7 @@ public class StatusListenerAdapter extends MessageListenerAdapter {
 	private Logger log = LogUtils.getLogger( "StatusListener" );
         private MonitorCache monitorCache;
 	
-	private final int statusType;
+	private int statusType = -1;
 	
 	public StatusListenerAdapter( int type, MonitorCache monitorCache ) {
 		super( "StatusMonitor", null );

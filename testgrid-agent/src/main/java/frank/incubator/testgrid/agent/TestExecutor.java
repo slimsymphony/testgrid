@@ -13,9 +13,11 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.exec.ExecuteException;
 import org.apache.commons.exec.ExecuteResultHandler;
 import org.apache.commons.exec.ExecuteWatchdog;
+import org.slf4j.Logger;
 
 import frank.incubator.testgrid.common.CommonUtils;
 import frank.incubator.testgrid.common.Constants;
+import frank.incubator.testgrid.common.file.DuplicatedOutputStream;
 import frank.incubator.testgrid.common.model.Device;
 import frank.incubator.testgrid.common.model.Test;
 import frank.incubator.testgrid.common.model.Test.Phase;
@@ -29,25 +31,28 @@ import frank.incubator.testgrid.common.model.Test.Phase;
  */
 public class TestExecutor implements Runnable {
 
-	public TestExecutor( Test test, AgentNode agent, Collection<Device> devices, OutputStream tracker, long timeout,
-			String clientTarget ) {
+	public TestExecutor(Test test, AgentNode agent, Collection<Device> devices, OutputStream tracker, long timeout,
+			String clientTarget) {
 		this.test = test;
-		//test.setStartTime( System.currentTimeMillis() );
+		// test.setStartTime( System.currentTimeMillis() );
 		this.agent = agent;
 		this.devices = devices;
-		if( agent.getBackupWorkspace().containsKey( test.getId() ) ) {
-			this.workspace = new File( agent.getWorkspace(), agent.getBackupWorkspace().remove( test.getId() ) );
+		if (agent.getBackupWorkspace().containsKey(test.getId())) {
+			this.workspace = new File(agent.getWorkspace(), agent.getBackupWorkspace().remove(test.getId()));
 		} else {
-			this.workspace = new File( agent.getWorkspace(), test.getId() );
+			this.workspace = new File(agent.getWorkspace(), test.getId());
 		}
-		
-		if ( tracker == null )
+
+		if (tracker == null)
 			tracker = System.out;
 		this.tracker = tracker;
 		this.timeout = timeout;
 		this.clientTarget = clientTarget;
+		dos.addOutputStream(tracker);
+		if(tracker != System.out)
+			dos.addOutputStream(System.out);
 	}
-	
+
 	private OutputStream tracker;
 	private String clientTarget;
 	private Test test;
@@ -58,14 +63,14 @@ public class TestExecutor implements Runnable {
 	private long timeout = Constants.DEFAULT_TEST_TIMEOUT;
 	private String failureReason = null;
 	private ExecuteWatchdog watchdog;
-
+	private DuplicatedOutputStream dos = new DuplicatedOutputStream();
 	private boolean running = true;
 
 	public Test getTest() {
 		return test;
 	}
 
-	public void setTest( Test test ) {
+	public void setTest(Test test) {
 		this.test = test;
 	}
 
@@ -73,7 +78,7 @@ public class TestExecutor implements Runnable {
 		return artifacts;
 	}
 
-	public void setArtifacts( Collection<File> artifacts ) {
+	public void setArtifacts(Collection<File> artifacts) {
 		this.artifacts = artifacts;
 	}
 
@@ -81,7 +86,7 @@ public class TestExecutor implements Runnable {
 		return agent;
 	}
 
-	public void setAgent( AgentNode agent ) {
+	public void setAgent(AgentNode agent) {
 		this.agent = agent;
 	}
 
@@ -89,7 +94,7 @@ public class TestExecutor implements Runnable {
 		return devices;
 	}
 
-	public void setDevices( Collection<Device> devices ) {
+	public void setDevices(Collection<Device> devices) {
 		this.devices = devices;
 	}
 
@@ -97,7 +102,7 @@ public class TestExecutor implements Runnable {
 		return workspace;
 	}
 
-	public void setWorkspace( File workspace ) {
+	public void setWorkspace(File workspace) {
 		this.workspace = workspace;
 	}
 
@@ -105,7 +110,7 @@ public class TestExecutor implements Runnable {
 		return timeout;
 	}
 
-	public void setTimeout( long timeout ) {
+	public void setTimeout(long timeout) {
 		this.timeout = timeout;
 	}
 
@@ -113,7 +118,7 @@ public class TestExecutor implements Runnable {
 		return running;
 	}
 
-	public void setRunning( boolean running ) {
+	public void setRunning(boolean running) {
 		this.running = running;
 	}
 
@@ -121,7 +126,7 @@ public class TestExecutor implements Runnable {
 		return clientTarget;
 	}
 
-	public void setClientTarget( String clientTarget ) {
+	public void setClientTarget(String clientTarget) {
 		this.clientTarget = clientTarget;
 	}
 
@@ -129,7 +134,7 @@ public class TestExecutor implements Runnable {
 		return failureReason;
 	}
 
-	public void setFailureReason( String failureReason ) {
+	public void setFailureReason(String failureReason) {
 		this.failureReason = failureReason;
 	}
 
@@ -140,38 +145,38 @@ public class TestExecutor implements Runnable {
 	public ExecuteWatchdog getWatchDog() {
 		return watchdog;
 	}
-	
-	private void p( String str ) {
+
+	private void p(String str) {
 		try {
-			tracker.write( str.getBytes( "UTF-8" ) );
-		} catch ( Exception e ) {
+			tracker.write(str.getBytes("UTF-8"));
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
-	
-	private void p( String str, Throwable t ) {
+
+	private void p(String str, Throwable t) {
 		try {
-			tracker.write( (str + "\n" ).getBytes( "UTF-8" ) );
-			tracker.write( CommonUtils.getErrorStack( t ).getBytes() );
-		} catch ( Exception e ) {
+			tracker.write((str + "\n").getBytes("UTF-8"));
+			tracker.write(CommonUtils.getErrorStack(t).getBytes());
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * Stop the running test.
 	 * 
 	 * @param reason
 	 */
-	public void stop( String reason ) {
-		p( "Task is to be stop externally because of:" + reason );
+	public void stop(String reason) {
+		p("Task is to be stop externally because of:" + reason);
 		failureReason = reason;
-		notifyFinish( Phase.FAILED );
-		if( watchdog != null ) {
+		notifyFinish(Phase.FAILED);
+		if (watchdog != null) {
 			try {
 				watchdog.destroyProcess();
-			}catch( Exception ex ) {
-				p( "Stop process met exception.", ex );
+			} catch (Exception ex) {
+				p("Stop process met exception.", ex);
 			}
 		}
 	}
@@ -179,143 +184,180 @@ public class TestExecutor implements Runnable {
 	@Override
 	public void run() {
 		try {
-			TimeUnit.SECONDS.sleep( 5 );
-		} catch ( InterruptedException e1 ) {
-			p( "Wait before started failed.", e1 );
+			TimeUnit.SECONDS.sleep(5);
+		} catch (InterruptedException e1) {
+			p("Wait before started failed.", e1);
 		}
-		p( "Test [" + test.getId() + "] begin ..." );
-
-		p( "Verify Artifacts" );
+		p("Test [" + test.getId() + "] begin ...");
+		for(Device d : devices) {
+			agent.getDm().setDeviceState(d.getId(), Device.DEVICE_BUSY);
+		}
+		p("Verify Artifacts");
 		boolean verified = verifyArtifacts();
-		if ( !verified ) {
-			p( "Verify failed. stop current test execution." );
-			stop( "Artifacts received not consistence with needed." );
+		if (!verified) {
+			p("Verify failed. stop current test execution.");
+			stop("Artifacts received not consistence with needed.");
 			return;
 		}
-		p( "Verify finished" );
-		
-		p( "Create device config file" );
-		File deviceConfigFile = new File( workspace, Constants.DEVICE_CONFIG_FILE );
+		p("Verify finished");
+
+		p("Create device config file");
+		File deviceConfigFile = new File(workspace, Constants.DEVICE_CONFIG_FILE);
 		FileOutputStream fos = null;
 		try {
-			fos = new FileOutputStream( deviceConfigFile );
-			fos.write( CommonUtils.toJson( devices ).getBytes() );
+			fos = new FileOutputStream(deviceConfigFile);
+			fos.write(CommonUtils.toJson(devices).getBytes());
 			fos.flush();
-		} catch ( Exception ex ) {
-			p( "Create Device Config File faild.", ex );
+		} catch (Exception ex) {
+			p("Create Device Config File faild.", ex);
 		} finally {
-			CommonUtils.closeQuietly( fos );
+			CommonUtils.closeQuietly(fos);
 		}
 
-		p( "Generate bootstrap app/script" );
+		p("Generate bootstrap app/script");
 		String app = test.getExecutorApplication();
 		String script = test.getExecutorScript();
-		Map<String, String> envs = test.getExecutorEnvparams();
-		if ( envs == null )
+		Map<String,String> envs = test.getExecutorEnvparams();
+		if (envs == null)
 			envs = new HashMap<String, String>();
-		for ( Device d : devices ) {
-			if ( d.getRole() == Device.ROLE_MAIN )
-				envs.put( Constants.ENV_DEVICE_MAIN_SN, ( String ) d.getAttribte( Constants.DEVICE_SN ) );
-			else if ( d.getRole() == Device.ROLE_REF )
-				envs.put( Constants.ENV_DEVICE_REF_SN, ( String ) d.getAttribte( Constants.DEVICE_SN ) );
+		for (Device d : devices) {
+			if (d.getRole() == Device.ROLE_MAIN)
+				envs.put(Constants.ENV_DEVICE_MAIN_SN, (String) d.getAttribute(Constants.DEVICE_SN));
+			else if (d.getRole() == Device.ROLE_REF)
+				envs.put(Constants.ENV_DEVICE_REF_SN, (String) d.getAttribute(Constants.DEVICE_SN));
 		}
 
 		List<String> appParams = test.getExecutorParameters();
 		StringBuffer executionList = new StringBuffer();
-		if ( app != null && !app.trim().isEmpty() ) {
+		if (app != null && !app.trim().isEmpty()) {
 			// application available. If script also available, call the app to
 			// execute the script; if not, call application directly.
-			if ( script != null && !script.trim().isEmpty() ) {
-				executionList.append( app ).append( " " ).append( script ).append( " " );
+			if (script != null && !script.trim().isEmpty()) {
+				executionList.append(app).append(" ").append(script).append(" ");
 			} else {
-				executionList.append( app ).append( " " );
+				executionList.append(app).append(" ");
 			}
 		} else {
 			// application not available, call script with shell, depends on OS
 			// platform.
-			if ( script != null && !script.trim().isEmpty() ) {
-				executionList.append( script ).append( " " );
+			if (script != null && !script.trim().isEmpty()) {
+				executionList.append(script).append(" ");
 			} else {
-				stop( "Didn't provide valid executor application&script, stop. test:" + test );
+				stop("Didn't provide valid executor application&script, stop. test:" + test);
 				return;
 			}
 		}
 
-		if ( appParams != null && !appParams.isEmpty() ) {
-			for ( String p : appParams ) {
-				executionList.append( p ).append( " " );
+		if (appParams != null && !appParams.isEmpty()) {
+			for (String p : appParams) {
+				executionList.append(p).append(" ");
 			}
 		}
 
-		p( "Executing Process" );
+		p("Executing Process");
+		FileOutputStream localLog = null;
 		try {
-			if ( !CommonUtils.isWindows() ) {
-				p( "Linux system should set app/script executable first" );
+			localLog = new FileOutputStream(new File(workspace,"stdout.log"));
+			dos.addOutputStream(localLog);
+			if (!CommonUtils.isWindows()) {
+				p("Linux system should set app/script executable first");
 				// set script or app executable.
-				if ( app != null ) {
-					File appFile = new File( workspace, app );
-					if ( appFile.exists() ) {
-						p( "Set app executable start." );
+				if (app != null && !app.trim().isEmpty()) {
+					File appFile = new File(workspace, app);
+					if (appFile.exists() && appFile.isFile() && !appFile.isDirectory()) {
+						p("Set app executable start.");
 						String executable = "chmod +x " + appFile.getAbsolutePath();
-						String output = CommonUtils.exec( executable, null );
-						p( "executable:" + executable + ", result:" + output );
+						String output = CommonUtils.exec(executable, null);
+						p("executable:" + executable + ", result:" + output);
 					}
 				}
 
-				if ( script != null ) {
-					File scriptFile = new File( workspace, script );
-					if ( scriptFile.exists() ) {
-						p( "Set script executable start." );
+				if (script != null && !script.trim().isEmpty()) {
+					File scriptFile = new File(workspace, script);
+					if (scriptFile.exists() && scriptFile.isFile() && !scriptFile.isDirectory()) {
+						p("Set script executable start.");
 						String executable = "chmod +x " + scriptFile.getAbsolutePath();
-						String output = CommonUtils.exec( executable, null );
-						p( "executable:" + executable + ", result:" + output );
+						String output = CommonUtils.exec(executable, null);
+						p("executable:" + executable + ", result:" + output);
 					}
 				}
 			}
 
 			String finalExec = executionList.toString();
-			if ( CommonUtils.isWindows() ) {
-				if( app == null || app.trim().isEmpty() || new File( workspace, app ).exists() )
+			if (CommonUtils.isWindows()) {
+				if (app == null || app.trim().isEmpty() || new File(workspace, app).exists())
 					finalExec = workspace.getAbsolutePath() + "/" + finalExec;
-				else if( app != null && !app.trim().isEmpty() && new File( workspace, app ).exists() ) {
-					finalExec =  "cmd /c " + finalExec;
+				else if (app != null && !app.trim().isEmpty() && !new File(workspace, app).exists()) {
+					finalExec = "cmd /c " + finalExec;
 				}
+			} else {
+				if (app == null || app.trim().isEmpty())
+					finalExec = "/bin/bash " + finalExec;
 			}
-			p( "begin formal execution: " + finalExec );
-			watchdog = CommonUtils.execASync( finalExec, new File( workspace.getAbsolutePath() ), envs, tracker,
+			if(test.getPreScript()!= null && !test.getPreScript().trim().isEmpty()) {
+				p("execute PreScirpt:" + test.getPreScript());
+				StringBuilder sb = new StringBuilder();
+				int result = 0;
+				try {
+					result = CommonUtils.execBlocking(test.getPreScript(), envs, sb, 30000);
+				}catch(Exception ex) {
+					p("PreScript execution failed.", ex);
+				}
+				p("PreScript result:" + result + " ,output:"+ sb.toString());
+			}
+			p("begin formal execution: " + finalExec);
+			watchdog = CommonUtils.execASync(finalExec, new File(workspace.getAbsolutePath()), envs, dos,
 					new ExecuteResultHandler() {
 
 						@Override
-						public void onProcessComplete( int exitValue ) {
-							p( "Process executing finished successfully. The exit value is " + exitValue );
-							notifyFinish( Phase.FINISHED );
+						public void onProcessComplete(int exitValue) {
+							p("Process executing finished successfully. The exit value is " + exitValue);
+							notifyFinish(Phase.FINISHED);
 							running = false;
 						}
 
 						@Override
-						public void onProcessFailed( ExecuteException e ) {
-							p( "Process executing failed.", e );
-							failureReason = e.getMessage() + "\n Stack:" + CommonUtils.getErrorStack( e );
-							notifyFinish( Phase.FAILED );
+						public void onProcessFailed(ExecuteException e) {
+							p("Process executing failed.", e);
+							failureReason = e.getMessage() + "\n Stack:" + CommonUtils.getErrorStack(e);
+							notifyFinish(Phase.FAILED);
 							running = false;
 						}
-					}, timeout );
-
-		} catch ( Exception e ) {
-			p( "Test execution exception.", e );
-		}
-		while ( running ) {
-			try {
-				TimeUnit.SECONDS.sleep( 5 );
-			} catch ( InterruptedException e ) {
-				p( "Got exception while Waiting for test process fininshed.", e );
-				failureReason = "Test["+ test.getId() + "] execution been interrupted. " + e.getMessage() + "\n Stack:" + CommonUtils.getErrorStack( e );
-				notifyFinish( Phase.FAILED );
-				running = false;
+					}, timeout);
+			while (running) {
+				try {
+					TimeUnit.SECONDS.sleep(5);
+				} catch (InterruptedException e) {
+					p("Got exception while Waiting for test process fininshed.", e);
+					failureReason = "Test[" + test.getId() + "] execution been interrupted. " + e.getMessage()
+							+ "\n Stack:" + CommonUtils.getErrorStack(e);
+					notifyFinish(Phase.FAILED);
+					running = false;
+				}
 			}
+			watchdog = null;
+			if(test.getPostScript()!= null && !test.getPostScript().trim().isEmpty()) {
+				p("execute PostScript:" + test.getPostScript());
+				StringBuilder sb = new StringBuilder();
+				int result = 0;
+				try {
+					result = CommonUtils.execBlocking(test.getPostScript(), envs, sb, 30000);
+				}catch(Exception ex) {
+					p("Post Script execution failed.", ex);
+				}
+				p("PostScript result:" + result + " ,output:"+ sb.toString());
+			}
+		} catch (Exception e) {
+			p("Test execution exception.", e);
+		}finally {
+			try {
+				localLog.flush();
+			}catch(Exception ex) {
+			}
+			CommonUtils.closeQuietly(localLog);
 		}
-		watchdog = null;
-		p( "Test [" + test.getId() + "] finished ..." );
+		
+		p("Test [" + test.getId() + "] finished ...");
 
 	}
 
@@ -326,19 +368,36 @@ public class TestExecutor implements Runnable {
 	 * @param phase
 	 *            The actual test phase . Could be Finished or Failed.
 	 */
-	public void notifyFinish( Phase phase ) {
-		this.test.setPhase( phase );
-		File resultFile = new File( workspace, test.getResultsFilename() );
-		if ( resultFile.exists() ) {
-			agent.finishTest( this );
-		} else {
-			p( "Cannot find the result File:" + resultFile.getAbsolutePath() + ", change result to "
-					+ Phase.FAILED.toString() );
-			this.test.setPhase( Phase.FAILED );
-			this.setFailureReason( "Cannot find the result File:" + resultFile.getAbsolutePath() );
-			agent.finishTest( this );
+	public void notifyFinish(Phase phase) {
+		this.test.setPhase(phase);
+		File resultFile = null;
+		for(String key : test.getResultFiles().keySet()) {
+			resultFile = new File(workspace, key);
+			if (!resultFile.exists()) {
+				if(test.getResultFiles().get(key)) {
+					p("Cannot find the result File:" + resultFile.getAbsolutePath() + ", change result to "
+							+ Phase.FAILED.toString());
+					this.test.setPhase(Phase.FAILED);
+					this.setFailureReason("Cannot find the result File:" + resultFile.getAbsolutePath());
+					break;
+				}
+			}
 		}
-		CommonUtils.closeQuietly( tracker );
+		agent.finishTest(this);
+		/*File resultFile = new File(workspace, test.getResultsFilename());
+		if (resultFile.exists()) {
+			agent.finishTest(this);
+		} else {
+			p("Cannot find the result File:" + resultFile.getAbsolutePath() + ", change result to "
+					+ Phase.FAILED.toString());
+			this.test.setPhase(Phase.FAILED);
+			this.setFailureReason("Cannot find the result File:" + resultFile.getAbsolutePath());
+			agent.finishTest(this);
+		}*/
+		if(dos != null) {
+			dos.remove(System.out);
+		}
+		CommonUtils.closeQuietly(dos);
 	}
 
 	/**
@@ -347,22 +406,23 @@ public class TestExecutor implements Runnable {
 	 * @return
 	 */
 	private boolean verifyArtifacts() {
-		for ( String fn : test.getArtifacts().keySet() ) {
+		for (String fn : test.getArtifacts().keySet()) {
 			boolean r = false;
-			long fl = test.getArtifacts().get( fn );
-			for ( File file : this.workspace.listFiles() ) {
-				if ( file.getName().equals( fn ) && file.length() == fl ) {
-					artifacts.add( file );
+			long fl = test.getArtifacts().get(fn);
+			for (File file : this.workspace.listFiles()) {
+				if (file.getName().equals(fn) && file.length() == fl) {
+					artifacts.add(file);
 					r = true;
 					break;
 				}
 			}
-			if ( !r ) {
-				File f = new File(workspace, fn );
+			if (!r) {
+				File f = new File(workspace, fn);
 				long len = 0L;
-				if( f.exists() )
+				if (f.exists())
 					len = f.length();
-				p( "Artifact[" + fn + "] verify failed. expect length:"+fl +", actual, exist:" + f.exists() +",length :" + len );
+				p("Artifact[" + fn + "] verify failed. expect length:" + fl + ", actual, exist:" + f.exists()
+						+ ",length :" + len);
 				return false;
 			}
 		}

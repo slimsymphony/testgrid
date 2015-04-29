@@ -16,66 +16,64 @@ import java.util.Observable;
 public abstract class BaseObject extends Observable {
 
 	protected String id;
-    protected long lastUpdated = System.currentTimeMillis();
+	protected long lastUpdated = System.currentTimeMillis();
 
-    //private static Hasher hc = Hashing.md5().newHasher();
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (!(obj.getClass().equals(this.getClass()))) {
-            return false;
-        }
-        if (this.id.equals(((BaseObject) obj).getId())) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == null) {
+			return false;
+		}
+		if (!(obj.getClass().equals(this.getClass()))) {
+			return false;
+		}
+		if (this.id.equals(((BaseObject) obj).getId())) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 
-    @Override
-    public int hashCode() {
-        return id.hashCode();
-        //return hc.putUnencodedChars( id ).hash().asInt();
-    }
+	@Override
+	public int hashCode() {
+		return id.hashCode();
+	}
 
-    public String getId() {
-        return id;
-    }
+	public String getId() {
+		return id;
+	}
 
-    public void setId(String id) {
-        this.id = id;
-    }
+	public void setId(String id) {
+		this.id = id;
+	}
 
-    @Override
-    public String toString() {
-        return toJson(this);
-    }
+	@Override
+	public String toString() {
+		return toJson(this);
+	}
 
-    public String getClassType() {
-        return this.getClass().getCanonicalName();
-    }
+	public String getClassType() {
+		return this.getClass().getCanonicalName();
+	}
 
-    public void markChange() {
-        this.setChanged();
-    }
+	public void markChange() {
+		this.setChanged();
+	}
 
-    public long getLastUpdated() {
-        return lastUpdated;
-    }
+	public long getLastUpdated() {
+		return lastUpdated;
+	}
 
-    public void setLastUpdated(long lastUpdated) {
-        this.lastUpdated = lastUpdated;
-    }
+	public void setLastUpdated(long lastUpdated) {
+		this.lastUpdated = lastUpdated;
+	}
 
-    public void notifyObservers(Object arg) {
-        this.lastUpdated = System.currentTimeMillis();
-        super.notifyObservers(arg);
-    }
+	public void notifyObservers(Object arg) {
+		this.lastUpdated = System.currentTimeMillis();
+		super.notifyObservers(arg);
+	}
 
-    public long calcTimeNotUpdatedTillNow(){
-        return ((System.currentTimeMillis() - lastUpdated) / 1000l / 60l );
-    }
+	public long calcTimeNotUpdatedTillNow() {
+		return ((System.currentTimeMillis() - lastUpdated) / 1000l / 60l);
+	}
 
 }

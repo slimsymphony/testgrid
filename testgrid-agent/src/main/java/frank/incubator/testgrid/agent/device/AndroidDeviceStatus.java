@@ -9,10 +9,10 @@ import frank.incubator.testgrid.common.model.BaseObject;
 
 public class AndroidDeviceStatus extends BaseObject {
 
-	public AndroidDeviceStatus( String id ) {
+	public AndroidDeviceStatus(String id) {
 		this.id = id;
 	}
-	
+
 	private Map<String, Integer> memInfo = new HashMap<String, Integer>();
 
 	private Map<Integer, Map<String, Object>> processes = new HashMap<Integer, Map<String, Object>>();
@@ -20,8 +20,6 @@ public class AndroidDeviceStatus extends BaseObject {
 	private List<Integer> topCpuConsumingProcs = new ArrayList<Integer>();
 
 	private List<Integer> topMemConsumingProcs = new ArrayList<Integer>();
-	
-	
 
 	private long frequency;
 
@@ -29,15 +27,15 @@ public class AndroidDeviceStatus extends BaseObject {
 
 	private String sim2Signal;
 
-	public void addProcessInfo( int pid, Map<String, Object> info ) {
-		processes.put( pid, info );
+	public void addProcessInfo(int pid, Map<String, Object> info) {
+		processes.put(pid, info);
 	}
-	
+
 	public Map<Integer, Map<String, Object>> getProcesses() {
 		return processes;
 	}
 
-	public void setProcesses( Map<Integer, Map<String, Object>> processes ) {
+	public void setProcesses(Map<Integer, Map<String, Object>> processes) {
 		this.processes = processes;
 	}
 
@@ -45,7 +43,7 @@ public class AndroidDeviceStatus extends BaseObject {
 		return topMemConsumingProcs;
 	}
 
-	public void setTopMemConsumingProcs( List<Integer> topMemConsumingProcs ) {
+	public void setTopMemConsumingProcs(List<Integer> topMemConsumingProcs) {
 		this.topMemConsumingProcs = topMemConsumingProcs;
 	}
 
@@ -53,7 +51,7 @@ public class AndroidDeviceStatus extends BaseObject {
 		return topCpuConsumingProcs;
 	}
 
-	public void setTopCpuConsumingProcs( List<Integer> topCpuConsumingProcs ) {
+	public void setTopCpuConsumingProcs(List<Integer> topCpuConsumingProcs) {
 		this.topCpuConsumingProcs = topCpuConsumingProcs;
 	}
 
@@ -61,7 +59,7 @@ public class AndroidDeviceStatus extends BaseObject {
 		return frequency;
 	}
 
-	public void setFrequency( long frequency ) {
+	public void setFrequency(long frequency) {
 		this.frequency = frequency;
 	}
 
@@ -69,7 +67,7 @@ public class AndroidDeviceStatus extends BaseObject {
 		return sim1Signal;
 	}
 
-	public void setSim1Signal( String sim1Signal ) {
+	public void setSim1Signal(String sim1Signal) {
 		this.sim1Signal = sim1Signal;
 	}
 
@@ -77,7 +75,7 @@ public class AndroidDeviceStatus extends BaseObject {
 		return sim2Signal;
 	}
 
-	public void setSim2Signal( String sim2Signal ) {
+	public void setSim2Signal(String sim2Signal) {
 		this.sim2Signal = sim2Signal;
 	}
 
@@ -85,12 +83,12 @@ public class AndroidDeviceStatus extends BaseObject {
 		return memInfo;
 	}
 
-	public void setMemInfo( Map<String, Integer> memInfo ) {
+	public void setMemInfo(Map<String, Integer> memInfo) {
 		this.memInfo = memInfo;
 	}
 
-	public void addMemInfo( String key, int value ) {
-		memInfo.put( key, value );
+	public void addMemInfo(String key, int value) {
+		memInfo.put(key, value);
 	}
-	
+
 }

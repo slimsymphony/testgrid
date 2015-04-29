@@ -10,9 +10,9 @@ public enum OperationType {
 
 	Status, Start, Stop, Finished, SendFile, Failed, Unknown;
 
-	public static OperationType parse( String type ) {
-		for ( OperationType t : OperationType.values() ) {
-			if ( t.name().equalsIgnoreCase( type ) )
+	public static OperationType parse(String type) {
+		for (OperationType t : OperationType.values()) {
+			if (t.name().equalsIgnoreCase(type))
 				return t;
 			break;
 		}

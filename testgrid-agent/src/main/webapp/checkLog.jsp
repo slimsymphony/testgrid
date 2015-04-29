@@ -3,7 +3,8 @@
 <%@page import="frank.incubator.testgrid.agent.*"%>
 <%@page import="java.io.*"%>
 <%@page import="frank.incubator.testgrid.common.*"%>
-<%@page import="org.apache.commons.io.comparator.LastModifiedFileComparator"%>
+<%@page
+	import="org.apache.commons.io.comparator.LastModifiedFileComparator"%>
 <%@page import="java.util.*"%>
 <%
 	AgentNode agent = (AgentNode)HttpServer.getAppRef();
@@ -29,14 +30,15 @@ body {
 	font-size: 12pt;
 	font-family: "Courier New";
 }
-#logContent{
-width: 90%;
-height: 800px;
-overflow: scroll; 
-overflow-y: scroll; 
-overflow-x: scroll; 
-overflow:-moz-scrollbars-vertical;
-white-space: nowrap;
+
+#logContent {
+	width: 90%;
+	height: 800px;
+	overflow: scroll;
+	overflow-y: scroll;
+	overflow-x: scroll;
+	overflow: -moz-scrollbars-vertical;
+	white-space: nowrap;
 }
 </style>
 <script type="text/javascript">
@@ -69,12 +71,19 @@ $(function(){
 		<%= CommonUtils.getHostName()%></h1>
 	<div id="main">
 		<select id="logSelector">
-		<% for( File f : arr ){ if(f.isFile()){%><option value='<%=f.getName() %>'><%=f.getName() %>  > size: <%=f.length()/1024 %>k</option><% }} %>
-		</select> &nbsp; <button id="btnOpen">open</button> &nbsp; Wrap<input type="checkbox" id="iptWrap"/> <br />
+			<% for( File f : arr ){ if(f.isFile()){%><option
+				value='<%=f.getName() %>'><%=f.getName() %> > size:
+				<%=f.length()/1024 %>k
+			</option>
+			<% }} %>
+		</select> &nbsp;
+		<button id="btnOpen">open</button>
+		&nbsp; Wrap<input type="checkbox" id="iptWrap" /> <br />
 		<textarea id="logContent"></textarea>
 	</div>
 	<br />
-	<a href="index.jsp">back home</a><br/>
+	<a href="index.jsp">back home</a>
+	<br />
 	<footer>
 		<a href="solarsystem.html">Welcome to use test grid</a>
 	</footer>

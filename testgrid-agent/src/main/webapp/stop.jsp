@@ -1,4 +1,5 @@
-<%@page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
+<%@page language="java" contentType="text/html; charset=utf-8"
+	pageEncoding="utf-8"%>
 <%@page import="frank.incubator.testgrid.common.model.*"%>
 <%@page import="frank.incubator.testgrid.agent.*"%>
 <%@page import="frank.incubator.testgrid.common.*"%>

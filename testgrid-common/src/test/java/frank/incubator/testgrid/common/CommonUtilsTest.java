@@ -8,11 +8,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import frank.incubator.testgrid.common.file.FileTransferChannel;
 import frank.incubator.testgrid.common.file.FileTransferDescriptor;
 import frank.incubator.testgrid.common.file.FtpFTChannel;
 import frank.incubator.testgrid.common.file.NfsFTChannel;
+import frank.incubator.testgrid.common.log.LogUtils;
 import frank.incubator.testgrid.common.model.Task;
 import frank.incubator.testgrid.common.model.Test;
 import frank.incubator.testgrid.common.model.TestSuite;
@@ -25,7 +27,7 @@ public class CommonUtilsTest {
 	 */
 	public static void main( String[] args ) throws Exception {
 		//testPortFind();
-		testJson();
+		//testJson();
 		//testPrintTime();
 		//testGrep();
 		//testSplitBlank();
@@ -33,6 +35,31 @@ public class CommonUtilsTest {
 		//testRender2Html();
 		//testReadConfig();
 		//testProcessHandle();
+		//testTimeoutExec();
+		//testBlocking();
+		float f = CommonUtils.checkLatency("slm.alipay.net");
+		System.out.println(f);
+		f = CommonUtils.checkLatency("10.62.0.76");
+		System.out.println(f);
+	}
+	
+	public static void testBlocking() throws IOException {
+		StringBuilder sb = new StringBuilder();
+		Map<String,String> env = new HashMap<String,String>();
+		env.put("DEVICE_MAIN_SN", "0224111208e4c60e");
+		env.put("ADB_HOME", "D:\\Android\\android-sdk\\platform-tools");
+		//%ADB_HOME%/adb -s %DEVICE_MAIN_SN% uninstall com.eg.android.AlipayGphone
+		CommonUtils.execBlocking("echo %ADB_HOME%", env, sb, 30000);
+		System.out.println(sb.toString());
+	}
+	public static void testTimeoutExec() {
+		long start = System.currentTimeMillis();
+		System.out.println("Start:" + start);
+		String output = CommonUtils.exec("cd & sleep 1", null, 3000, LogUtils.getLogger("test"));
+		System.out.println(output);
+		long end = System.currentTimeMillis();
+		System.out.println("End:" +end);
+		System.out.println("Duration:" + TimeUnit.SECONDS.convert((end-start),TimeUnit.MILLISECONDS));
 	}
 	
 	private static void testProcessHandle() {

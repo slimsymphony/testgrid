@@ -67,7 +67,7 @@ public class WebConsoleBootstrap extends Thread {
 
 	private String mqPasswd = "";
 
-	private int serivePort = 5451;
+	private int serivePort = 8080;
 
 	public String getMqUri() {
 		return mqUri;

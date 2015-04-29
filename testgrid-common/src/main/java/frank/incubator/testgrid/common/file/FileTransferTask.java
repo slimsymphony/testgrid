@@ -13,7 +13,6 @@ import frank.incubator.testgrid.common.model.BaseObject;
  * 
  */
 public class FileTransferTask extends BaseObject implements Comparable<FileTransferTask> {
-	private static final long serialVersionUID = 4400207885298297132L;
 	private String from;
 	private String targetUri;
 	private String taskId;
@@ -24,14 +23,15 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 	private FileTransferDescriptor descriptor;
 	private FileTransferChannel currentChannel;
 
-	public FileTransferTask( String from, String targetUri, String taskId, String testId, Collection<File> files ) {
-		this( null, from, targetUri, taskId, testId, files );
+	public FileTransferTask(String from, String targetUri, String taskId, String testId, Collection<File> files) {
+		this(null, from, targetUri, taskId, testId, files);
 	}
-	
-	public FileTransferTask( String id, String from, String targetUri, String taskId, String testId, Collection<File> files ) {
-		if( id == null || id.trim().isEmpty() )
-			this.id = "FT_" + testId + "_" + CommonUtils.generateToken( 5 );
-		else 
+
+	public FileTransferTask(String id, String from, String targetUri, String taskId, String testId,
+			Collection<File> files) {
+		if (id == null || id.trim().isEmpty())
+			this.id = "FT_" + testId + "_" + CommonUtils.generateToken(5);
+		else
 			this.id = id;
 		this.from = from;
 		this.targetUri = targetUri;
@@ -46,7 +46,7 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 		return from;
 	}
 
-	public void setFrom( String from ) {
+	public void setFrom(String from) {
 		this.from = from;
 	}
 
@@ -54,7 +54,7 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 		return targetUri;
 	}
 
-	public void setTargetUri( String targetUri ) {
+	public void setTargetUri(String targetUri) {
 		this.targetUri = targetUri;
 	}
 
@@ -62,7 +62,7 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 		return taskId;
 	}
 
-	public void setTaskId( String taskId ) {
+	public void setTaskId(String taskId) {
 		this.taskId = taskId;
 	}
 
@@ -70,7 +70,7 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 		return testId;
 	}
 
-	public void setTestId( String testId ) {
+	public void setTestId(String testId) {
 		this.testId = testId;
 	}
 
@@ -78,7 +78,7 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 		return files;
 	}
 
-	public void setFiles( Collection<File> files ) {
+	public void setFiles(Collection<File> files) {
 		this.files = files;
 	}
 
@@ -86,7 +86,7 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 		return start;
 	}
 
-	public void setStart( long start ) {
+	public void setStart(long start) {
 		this.start = start;
 	}
 
@@ -94,7 +94,7 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 		return retry;
 	}
 
-	public void setRetry( int retry ) {
+	public void setRetry(int retry) {
 		this.retry = retry;
 	}
 
@@ -102,7 +102,7 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 		return descriptor;
 	}
 
-	public void setDescriptor( FileTransferDescriptor descriptor ) {
+	public void setDescriptor(FileTransferDescriptor descriptor) {
 		this.descriptor = descriptor;
 	}
 
@@ -110,7 +110,7 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 		return currentChannel;
 	}
 
-	public void setCurrentChannel( FileTransferChannel currentChannel ) {
+	public void setCurrentChannel(FileTransferChannel currentChannel) {
 		this.currentChannel = currentChannel;
 	}
 
@@ -120,9 +120,9 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 	 * @see java.lang.Comparable#compareTo(java.lang.Object)
 	 */
 	@Override
-	public int compareTo( FileTransferTask o ) {
-		if ( o == null )
-			throw new NullPointerException( "Compare Object is Null" );
-		return ( this.start < o.getStart() ) ? -1 : ( ( this.start == o.getStart() ) ? 0 : -1 );
+	public int compareTo(FileTransferTask o) {
+		if (o == null)
+			throw new NullPointerException("Compare Object is Null");
+		return (this.start < o.getStart()) ? -1 : ((this.start == o.getStart()) ? 0 : -1);
 	}
 }

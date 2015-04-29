@@ -23,18 +23,23 @@ import frank.incubator.testgrid.common.model.Test;
  */
 public class TestListener extends PropertyMessageFilter {
 
-	@SuppressWarnings( "serial" )
-	public TestListener( final Test test, String host, OutputStream tracker ) {
-		this( test, host, new HashMap<String,Object>(){{this.put(Constants.MSG_HEAD_TESTID, test.getId());this.put(Constants.MSG_HEAD_CONTENT, Constants.MSG_CONTENT_TEXT);}}, tracker);
+	@SuppressWarnings("serial")
+	public TestListener(final Test test, String host, OutputStream tracker) {
+		this(test, host, new HashMap<String, Object>() {
+			{
+				this.put(Constants.MSG_HEAD_TESTID, test.getId());
+				this.put(Constants.MSG_HEAD_CONTENT, Constants.MSG_CONTENT_TEXT);
+			}
+		}, tracker);
 	}
 
-	public TestListener( Test test, String host, Map<String,Object> critiera, OutputStream tracker ) {
-		super( critiera );
+	public TestListener(Test test, String host, Map<String, Object> critiera, OutputStream tracker) {
+		super(critiera);
 		this.test = test;
 		this.start = System.currentTimeMillis();
 		this.hostAgent = host;
 		this.tracker = tracker;
-		this.log = LogUtils.get( "TestListener[" + test.getId() + "]" );
+		this.log = LogUtils.get("TestListener[" + test.getTaskID()+ "(" + test.getId() + ")]");
 	}
 
 	private long start;
@@ -56,36 +61,38 @@ public class TestListener extends PropertyMessageFilter {
 	}
 
 	@Override
-	public void handle( Message message ) {
+	public void handle(Message message) {
 		try {
-			if( message instanceof TextMessage ) {
-				String text = ( ( TextMessage ) message ).getText();
+			if (message instanceof TextMessage) {
+				String text = ((TextMessage) message).getText();
 				StringBuilder sb = new StringBuilder();
-				if( text != null && text.indexOf( "\n" ) >= 0 ) {
+				if (text != null && text.indexOf("\n") >= 0) {
 					boolean first = true;
-					for(  String s : text.split( "\n" ) ) {
-						if( first ) {
-							sb.append( CommonUtils.getTime() ).append( "[" ).append( test.getId() ).append( " from:" + hostAgent + "]>  " ).append( text ).append( "\n" );
-							tracker.write( sb.toString().getBytes( "UTF-8" ) );
+					for (String s : text.split("\n")) {
+						if (first) {
+							sb.append(CommonUtils.getTime()).append(test.getTaskID()).append("[").append(test.getId())
+									.append(" from:" + hostAgent + "]>  ").append(text).append("\n");
+							tracker.write(sb.toString().getBytes("UTF-8"));
 							tracker.flush();
-							log.info( sb.toString() );
+							log.info(sb.toString());
 							first = false;
 						} else {
-							tracker.write( s.getBytes( "UTF-8" ) );
-							tracker.write( '\n' );
+							tracker.write(s.getBytes("UTF-8"));
+							tracker.write('\n');
 							tracker.flush();
-							log.info( s );
+							log.info(s);
 						}
 					}
 				} else {
-					sb.append( CommonUtils.getTime() ).append( "[" ).append( test.getId() ).append( " from:" + hostAgent + "]>  " ).append( text ).append( "\n" );
-					tracker.write( sb.toString().getBytes( "UTF-8" ) );
+					sb.append(CommonUtils.getTime()).append(test.getTaskID()).append("[").append(test.getId())
+							.append(" from:" + hostAgent + "]>  ").append(text).append("\n");
+					tracker.write(sb.toString().getBytes("UTF-8"));
 					tracker.flush();
-					log.info( sb.toString() );
+					log.info(sb.toString());
 				}
 			}
-		} catch ( Exception e ) {
-			log.error( "Handle incoming message failed.", e );
+		} catch (Exception e) {
+			log.error("Handle incoming message failed.", e);
 		}
 	}
 
@@ -96,11 +103,11 @@ public class TestListener extends PropertyMessageFilter {
 	public String getHostAgent() {
 		return hostAgent;
 	}
-	
+
 	@Override
 	public void dispose() {
 		super.dispose();
-		LogUtils.dispose( log );
+		LogUtils.dispose(log);
 	}
-	
+
 }

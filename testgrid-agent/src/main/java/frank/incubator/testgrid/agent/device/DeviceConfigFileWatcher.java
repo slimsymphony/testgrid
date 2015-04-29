@@ -20,17 +20,18 @@ public class DeviceConfigFileWatcher extends FileWatchService {
 	private DeviceDetector deviceDetector;
 	private String fileExtension;
 
-	public DeviceConfigFileWatcher( Path dir, DeviceDetector dd, String fileExtension ) throws IOException {
-		super( dir, false );
+	public DeviceConfigFileWatcher(Path dir, DeviceDetector dd, String fileExtension) throws IOException {
+		super(dir, false);
 		this.fileExtension = fileExtension;
 		deviceDetector = dd;
 	}
 
 	@Override
-	public void handleEvent( WatchEvent<Path> event, Path path ) {
+	public void handleEvent(WatchEvent<Path> event, Path path) {
 		Kind<Path> kind = event.kind();
-		if ( fileExtension == null || fileExtension.trim().isEmpty() || fileExtension.equals( "*" ) || path.getFileName().toString().toLowerCase().endsWith( fileExtension ) ) {
-			if ( kind == StandardWatchEventKinds.ENTRY_MODIFY || kind == StandardWatchEventKinds.ENTRY_DELETE ) {
+		if (fileExtension == null || fileExtension.trim().isEmpty() || fileExtension.equals("*")
+				|| path.getFileName().toString().toLowerCase().endsWith(fileExtension)) {
+			if (kind == StandardWatchEventKinds.ENTRY_MODIFY || kind == StandardWatchEventKinds.ENTRY_DELETE) {
 				deviceDetector.refresh();
 			}
 		}

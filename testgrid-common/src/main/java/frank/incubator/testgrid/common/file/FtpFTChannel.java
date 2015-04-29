@@ -7,6 +7,7 @@ import java.util.Map;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
 
+import frank.incubator.testgrid.common.CommonUtils;
 import frank.incubator.testgrid.common.log.LogConnector;
 
 /**
@@ -19,49 +20,55 @@ public class FtpFTChannel extends FileTransferChannel {
 
 	public FtpFTChannel() {
 		this.id = "FTP";
-		this.setPriority( 3 );
+		this.setPriority(3);
 	}
 
-	public FtpFTChannel( String host, String user, String pwd, int port ) {
+	public FtpFTChannel(String host, String user, String pwd, int port) {
 		this.id = "FTP";
-		this.properties.put( "user", user );
-		this.properties.put( "host", host );
-		this.properties.put( "pwd", pwd );
-		if ( port < 21 )
-			this.properties.put( "port", new Integer(21) );
+		this.properties.put("user", user);
+		this.properties.put("host", host);
+		this.properties.put("pwd", pwd);
+		if (port < 21)
+			this.properties.put("port", new Integer(21));
 		else
-			this.properties.put( "port", port );
-		this.setPriority( 3 );
+			this.properties.put("port", port);
+		this.setPriority(3);
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * frank.incubator.testgrid.common.file.FileTransferChannel#validate()
+	 * @see frank.incubator.testgrid.common.file.FileTransferChannel#validate()
 	 */
 	@Override
-	public boolean validate() {
+	public boolean validate(LogConnector log) {
 		FTPClient ftp = new FTPClient();
 		boolean result = true;
 		try {
-			if ( !ftp.isConnected() ) {
-				ftp.connect( getProperty( "host", String.class ), getProperty( "port", 21 ) );
-				ftp.login( getProperty( "user", String.class ), getProperty( "pwd", String.class ) );
+			if(log != null)
+				log.info("Begin to validate ftp connectivity");
+			if (!ftp.isConnected()) {
+				ftp.connect(getProperty("host", String.class), getProperty("port", 21));
+				ftp.login(getProperty("user", String.class), getProperty("pwd", String.class));
 				int reply = ftp.getReplyCode();
-				if ( !FTPReply.isPositiveCompletion( reply ) )
+				if (!FTPReply.isPositiveCompletion(reply))
 					result = false;
+			}else {
+				if(log != null)
+					log.warn("Validate ftp connectivity failed.{}:{}", CommonUtils.toJson(this.getProperties()));
 			}
-		} catch ( Exception e ) {
+		} catch (Exception e) {
 			result = false;
 			e.printStackTrace();
 		} finally {
 			try {
 				ftp.disconnect();
-			} catch ( Exception e ) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
+		if(log != null)
+			log.warn("Validate ftp connectivity failed.props:{}", CommonUtils.toJson(this.getProperties()));
 		return result;
 	}
 
@@ -71,29 +78,28 @@ public class FtpFTChannel extends FileTransferChannel {
 	 * @see frank.incubator.testgrid.common.file.FileTransferChannel#apply()
 	 */
 	@Override
-	public boolean apply() {
-		return validate();
+	public boolean apply(LogConnector log) {
+		return validate(log);
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * frank.incubator.testgrid.common.file.FileTransferChannel#send(java.
+	 * @see frank.incubator.testgrid.common.file.FileTransferChannel#send(java.
 	 * lang.String, java.io.File[])
 	 */
 	@Override
-	public boolean send( String token, Collection<File> fileList, LogConnector log ) {
-		log.info( "FtpFTChannel begin sending files. token=" + token );
-		FTPFileTransferSource source = new FTPFileTransferSource( getProperty( "host", String.class ), getProperty( "port", 21 ), getProperty( "user",
-				String.class ), getProperty( "pwd", String.class ), log.getOs() );
+	public boolean send(String token, Collection<File> fileList, LogConnector log) {
+		log.info("FtpFTChannel begin sending files. token=" + token);
+		FTPFileTransferSource source = new FTPFileTransferSource(getProperty("host", String.class), getProperty("port",
+				21), getProperty("user", String.class), getProperty("pwd", String.class), log.getOs());
 		try {
-			source.push( token, fileList );
-		} catch ( Exception e ) {
-			log.error( "Sending Files via FTP failed. token=" + token, e );
+			source.push(token, fileList);
+		} catch (Exception e) {
+			log.error("Sending Files via FTP failed. token=" + token, e);
 			return false;
 		}
-		log.info( "FtpFTChannel finished sending files. token=" + token );
+		log.info("FtpFTChannel finished sending files. token=" + token);
 		return true;
 	}
 
@@ -105,19 +111,24 @@ public class FtpFTChannel extends FileTransferChannel {
 	 * .lang.String, java.util.Map, java.io.File)
 	 */
 	@Override
-	public boolean receive( String token, Map<String, Long> fileList, File localDestDir, LogConnector log ) {
-		log.info( "FtpFTChannel begin receiving files. token=" + token );
-		FTPFileTransferTarget target = new FTPFileTransferTarget( getProperty( "host", String.class ), getProperty( "port", 21 ), getProperty( "user",
-				String.class ), getProperty( "pwd", String.class ), log.getOs() );
+	public boolean receive(String token, Map<String, Long> fileList, File localDestDir, LogConnector log) {
+		log.info("FtpFTChannel begin receiving files. token=" + token);
+		FTPFileTransferTarget target = new FTPFileTransferTarget(getProperty("host", String.class), getProperty("port",
+				21), getProperty("user", String.class), getProperty("pwd", String.class), log.getOs());
 		try {
-			target.fetch( token, fileList, localDestDir );
-		} catch ( Exception e ) {
-			log.error( "Fetching Files via FTP failed. token=" + token, e );
+			target.fetch(token, fileList, localDestDir);
+		} catch (Exception e) {
+			log.error("Fetching Files via FTP failed. token=" + token, e);
 			return false;
 		}
-		log.info( "FtpFTChannel finished receiving files. token=" + token );
+		log.info("FtpFTChannel finished receiving files. token=" + token);
 		target.dispose();
 		return true;
+	}
+
+	@Override
+	public void dispose() {
+		// TODO Auto-generated method stub
 	}
 
 }
