@@ -114,8 +114,7 @@ public class WaitTaskNotifier extends Thread implements MessageListener {
 		if (test != null && from != null) {
 			long t = System.currentTimeMillis();
 			waitlist.add(new WaitTask(test, from, t));
-			log.info("New Waiting test from " + from + " have been added to waiting list: " + test + " at "
-					+ CommonUtils.getTime());
+			log.info("New Waiting test from {} have been added to waiting list:{}  at {}", from, test, CommonUtils.getTime());
 		}
 	}
 
@@ -133,8 +132,7 @@ public class WaitTaskNotifier extends Thread implements MessageListener {
 			while (it.hasNext()) {
 				WaitTask t = it.next();
 				if ((System.currentTimeMillis() - t.receiveTime) > this.monitorTimeout) {
-					log.info("Test [" + t.test + "] from " + t.from + " begin at " + CommonUtils.convert(t.receiveTime)
-							+ " got expriration.");
+					log.info("Test [" + t.test + "] from " + t.from + " begin at " + CommonUtils.convert(t.receiveTime) + " got expriration.");
 					it.remove();
 					continue;
 				}
@@ -166,13 +164,12 @@ public class WaitTaskNotifier extends Thread implements MessageListener {
 			if (this.waitlist.contains(w)) {
 				int taskState = getProperty(message, Constants.MSG_HEAD_TASKSTATE, 0);
 				switch (taskState) {
-				case Constants.TASK_STATUS_FINISHED:
-				case Constants.TASK_STATUS_FAILED:
-				case Constants.TASK_STATUS_STARTED:
-					waitlist.remove(w);
-					log.info("Test:[" + test + "] from " + from
-							+ " have already been exeucted, no need to monitor anymore.");
-					break;
+					case Constants.TASK_STATUS_FINISHED:
+					case Constants.TASK_STATUS_FAILED:
+					case Constants.TASK_STATUS_STARTED:
+						waitlist.remove(w);
+						log.info("Test:[" + test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + "] from " + from + " have already been exeucted, no need to monitor anymore.");
+						break;
 				}
 			}
 		} catch (Exception ex) {

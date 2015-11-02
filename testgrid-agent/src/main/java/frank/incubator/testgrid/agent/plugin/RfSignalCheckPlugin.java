@@ -38,8 +38,7 @@ public class RfSignalCheckPlugin extends AbstractAgentPlugin<Void> {
 		RandomAccessFile raf = null;
 		for (Device d : this.getDm().listDevices()) {
 			try {
-				if (d instanceof AndroidDevice && d.getState() != Device.DEVICE_LOST
-						&& d.getState() != Device.DEVICE_LOST_TEMP) {
+				if (d instanceof AndroidDevice && d.getState() != Device.DEVICE_LOST && d.getState() != Device.DEVICE_LOST_TEMP) {
 					String sn = d.getAttribute(Constants.DEVICE_SN);
 					f = new File(parent, sn + ".txt");
 					if (!f.exists())
@@ -50,8 +49,7 @@ public class RfSignalCheckPlugin extends AbstractAgentPlugin<Void> {
 						cal.setTimeInMillis(f.lastModified());
 						int day2 = cal.get(Calendar.DAY_OF_MONTH);
 						if (day != day2) {
-							f.renameTo(new File(parent, f.getName() + "." + cal.get(Calendar.YEAR)
-									+ cal.get(Calendar.MONTH) + cal.get(Calendar.DAY_OF_MONTH)));
+							f.renameTo(new File(parent, f.getName() + "." + cal.get(Calendar.YEAR) + cal.get(Calendar.MONTH) + cal.get(Calendar.DAY_OF_MONTH)));
 							f = new File(parent, sn + ".txt");
 							f.createNewFile();
 						}
@@ -73,12 +71,10 @@ public class RfSignalCheckPlugin extends AbstractAgentPlugin<Void> {
 							String line = null;
 							String signalStrength = "";
 							if (CommonUtils.isWindows())
-								signalStrength = CommonUtils.grep(
-										exec(adb() + " -s " + sn + " shell dumpsys telephony.msim.registry", null),
+								signalStrength = CommonUtils.grep(exec(adb() + " -s " + sn + " shell dumpsys telephony.msim.registry", null),
 										"mSignalStrength", false);
 							else
-								signalStrength = exec(adb() + " -s " + sn
-										+ " shell dumpsys telephony.msim.registry|grep mSignalStrength", null);
+								signalStrength = exec(adb() + " -s " + sn + " shell dumpsys telephony.msim.registry|grep mSignalStrength", null);
 
 							br = new BufferedReader(new StringReader(signalStrength.trim()));
 							int simCn = 0;

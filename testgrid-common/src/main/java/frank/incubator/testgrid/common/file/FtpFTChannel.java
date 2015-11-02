@@ -45,7 +45,7 @@ public class FtpFTChannel extends FileTransferChannel {
 		FTPClient ftp = new FTPClient();
 		boolean result = true;
 		try {
-			if(log != null)
+			if (log != null)
 				log.info("Begin to validate ftp connectivity");
 			if (!ftp.isConnected()) {
 				ftp.connect(getProperty("host", String.class), getProperty("port", 21));
@@ -53,8 +53,8 @@ public class FtpFTChannel extends FileTransferChannel {
 				int reply = ftp.getReplyCode();
 				if (!FTPReply.isPositiveCompletion(reply))
 					result = false;
-			}else {
-				if(log != null)
+			} else {
+				if (log != null)
 					log.warn("Validate ftp connectivity failed.{}:{}", CommonUtils.toJson(this.getProperties()));
 			}
 		} catch (Exception e) {
@@ -67,7 +67,7 @@ public class FtpFTChannel extends FileTransferChannel {
 				e.printStackTrace();
 			}
 		}
-		if(log != null)
+		if (log != null)
 			log.warn("Validate ftp connectivity failed.props:{}", CommonUtils.toJson(this.getProperties()));
 		return result;
 	}
@@ -91,8 +91,8 @@ public class FtpFTChannel extends FileTransferChannel {
 	@Override
 	public boolean send(String token, Collection<File> fileList, LogConnector log) {
 		log.info("FtpFTChannel begin sending files. token=" + token);
-		FTPFileTransferSource source = new FTPFileTransferSource(getProperty("host", String.class), getProperty("port",
-				21), getProperty("user", String.class), getProperty("pwd", String.class), log.getOs());
+		FTPFileTransferSource source = new FTPFileTransferSource(getProperty("host", String.class), getProperty("port", 21), getProperty("user", String.class),
+				getProperty("pwd", String.class), log.getOs());
 		try {
 			source.push(token, fileList);
 		} catch (Exception e) {
@@ -113,8 +113,8 @@ public class FtpFTChannel extends FileTransferChannel {
 	@Override
 	public boolean receive(String token, Map<String, Long> fileList, File localDestDir, LogConnector log) {
 		log.info("FtpFTChannel begin receiving files. token=" + token);
-		FTPFileTransferTarget target = new FTPFileTransferTarget(getProperty("host", String.class), getProperty("port",
-				21), getProperty("user", String.class), getProperty("pwd", String.class), log.getOs());
+		FTPFileTransferTarget target = new FTPFileTransferTarget(getProperty("host", String.class), getProperty("port", 21), getProperty("user", String.class),
+				getProperty("pwd", String.class), log.getOs());
 		try {
 			target.fetch(token, fileList, localDestDir);
 		} catch (Exception e) {

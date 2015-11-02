@@ -51,7 +51,7 @@ public final class FTPFileTransferTarget implements FileTransferTarget {
 				ArrayList<File> files = new ArrayList<File>();
 				ftp.setFileType(FTP.BINARY_FILE_TYPE);
 				ftp.changeWorkingDirectory(token);
-				log.info("Current directory is " + ftp.printWorkingDirectory());
+				log.info("Current directory is {}", ftp.printWorkingDirectory());
 				if (!localDestDir.exists()) {
 					localDestDir.mkdirs();
 				}
@@ -60,20 +60,20 @@ public final class FTPFileTransferTarget implements FileTransferTarget {
 					long fileSize = fileList.get(fileName);
 					File file = new File(localDestDir.getPath(), fileName);
 					if (file.exists()) {
-						log.warn("The file " + file.getAbsolutePath() + " already exists there, deleted.");
+						log.warn("The file {} already exists there, deleted.", file.getAbsolutePath());
 						file.delete();
 						file.createNewFile();
 					}
-					log.info("fileName is " + fileName);
+					log.info("fileName is {}", fileName);
 					OutputStream output = null;
 					try {
 						output = new FileOutputStream(file);
 						boolean result = ftp.retrieveFile(fileName, output);
 						if (result && validate(file, fileName, fileSize)) {
-							log.info("Succeed to download file " + file.getName());
+							log.info("Succeed to download file {}", file.getName());
 							files.add(file);
 						} else {
-							log.info("Failed to download file " + file.getName());
+							log.info("Failed to download file {}", file.getName());
 							throw new Exception("Download File:" + fileName + " failed.");
 						}
 						output.flush();
@@ -84,8 +84,8 @@ public final class FTPFileTransferTarget implements FileTransferTarget {
 				return files;
 			} else {
 				log.error("fetch:Connect to server failed.");
-				throw new Exception("Connect to FileTransfer FTP server failed. host=" + host + ", port=" + port
-						+ ", username=" + userName + ",passwd=" + password);
+				throw new Exception("Connect to FileTransfer FTP server failed. host=" + host + ", port=" + port + ", username=" + userName + ",passwd="
+						+ password);
 			}
 		} finally {
 			ftp.disconnect();
@@ -109,10 +109,10 @@ public final class FTPFileTransferTarget implements FileTransferTarget {
 		try {
 			if (!ftp.isConnected()) {
 				ftp.connect(host, port);
-				log.info("Connected to " + host + ":" + port);
+				log.info("Connected to {}:{}", host, port);
 				ftp.login(userName, password);
 				int reply = ftp.getReplyCode();
-				log.info("Reply Code:" + reply);
+				log.info("Reply Code:{}", reply);
 				if (!FTPReply.isPositiveCompletion(reply)) {
 					ftp.disconnect();
 					log.error("FTP server refused connection.");
@@ -148,18 +148,18 @@ public final class FTPFileTransferTarget implements FileTransferTarget {
 
 	public boolean deleteFiles(String directoyNamePath) throws Exception {
 		boolean result = true;
-		//ftp.changeToParentDirectory();
+		// ftp.changeToParentDirectory();
 		String targetPath = ftp.printWorkingDirectory() + "/" + directoyNamePath;
 		targetPath = targetPath.replaceAll("//", "/");
 		FTPFile[] fileList = ftp.listFiles(targetPath);
 		for (FTPFile file : fileList) {
 			if (file.isDirectory()) {
-				log.info("Delete sub directory " + file.getName());
+				log.info("Delete sub directory {}", file.getName());
 				String subDirectoryNamePath = directoyNamePath + "/" + file.getName();
 				deleteFiles(subDirectoryNamePath);
 			}
 			if (file.isFile()) {
-				log.info("Delete file " + file.getName());
+				log.info("Delete file {}", file.getName());
 				try {
 					ftp.deleteFile(targetPath + "/" + file.getName());
 				} catch (IOException e) {
@@ -167,7 +167,7 @@ public final class FTPFileTransferTarget implements FileTransferTarget {
 				}
 			}
 		}
-		log.info("Delete empty directory after " + directoyNamePath);
+		log.info("Delete empty directory after {}", directoyNamePath);
 		ftp.removeDirectory(targetPath);
 		return result;
 	}

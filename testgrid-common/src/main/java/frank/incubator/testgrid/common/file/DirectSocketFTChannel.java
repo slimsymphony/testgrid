@@ -34,7 +34,7 @@ public class DirectSocketFTChannel extends FileTransferChannel {
 		dts = new DirectSocketTransferSource(null, servicePort, null);
 		dts.start();
 		this.setProperty("servicePort", servicePort);
-		if(log != null)
+		if (log != null)
 			log.info("Begin to start service Port:{}", servicePort);
 		return true;
 	}
@@ -49,20 +49,20 @@ public class DirectSocketFTChannel extends FileTransferChannel {
 		Socket socket = null;
 		try {
 			if (!this.getProperties().containsKey("host")) {
-				if(log != null)
+				if (log != null)
 					log.info("Properties missing Host info.");
 				this.getProperties().put("host", CommonUtils.getHostName());
 			}
 			if (!this.getProperties().containsKey("servicePort")) {
-				if(log != null)
+				if (log != null)
 					log.info("Properties missing servicePort");
 				return false;
 			}
 			socket = new Socket();
-			socket.connect(new InetSocketAddress(this.getProperty("host", "localhost"), this.getProperty("servicePort",
-					Integer.class)));
-			if(log != null)
-				log.info("success Apply Socket channel from {} to {}:{}", CommonUtils.getHostName(), this.getProperty("host", "localhost"),this.getProperty("servicePort",Integer.class));
+			socket.connect(new InetSocketAddress(this.getProperty("host", "localhost"), this.getProperty("servicePort", Integer.class)));
+			if (log != null)
+				log.info("success Apply Socket channel from {} to {}:{}", CommonUtils.getHostName(), this.getProperty("host", "localhost"),
+						this.getProperty("servicePort", Integer.class));
 		} catch (Exception ex) {
 			return false;
 		} finally {
@@ -81,14 +81,14 @@ public class DirectSocketFTChannel extends FileTransferChannel {
 	@Override
 	public boolean send(String token, Collection<File> fileList, LogConnector log) {
 		if (dts == null) {
-			if(log != null)
+			if (log != null)
 				log.error("DirectSocketTransferSource is NULL, can't continue sending files.");
 			return false;
 		}
 		try {
 			dts.publish(token, fileList);
 		} catch (Exception e) {
-			if(log != null)
+			if (log != null)
 				log.error("Send Files via DirectSocket failed. Token=" + token, e);
 			return false;
 		}
@@ -105,12 +105,12 @@ public class DirectSocketFTChannel extends FileTransferChannel {
 	 */
 	@Override
 	public boolean receive(String token, Map<String, Long> fileList, File localDestDir, LogConnector log) {
-		DirectSocketTransferTarget dtt = new DirectSocketTransferTarget(this.getProperty("host", String.class),
-				this.getProperty("servicePort", Integer.class), log.getOs());
+		DirectSocketTransferTarget dtt = new DirectSocketTransferTarget(this.getProperty("host", String.class), this.getProperty("servicePort", Integer.class),
+				log.getOs());
 		try {
 			dtt.fetch(token, fileList, localDestDir);
 		} catch (Exception e) {
-			if(log != null)
+			if (log != null)
 				log.error("Receiving files via DirectSocket failed.Token=" + token, e);
 			return false;
 		}

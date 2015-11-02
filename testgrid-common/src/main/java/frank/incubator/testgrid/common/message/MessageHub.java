@@ -35,9 +35,13 @@ public class MessageHub {
 	}
 
 	public MessageHub(String hostType, BrokerDescriptor... descs) throws MessageException {
+		this(hostType, null, descs);
+	}
+	
+	public MessageHub(String hostType, Notifier notifier, BrokerDescriptor... descs) throws MessageException {
 		for (BrokerDescriptor desc : descs) {
 			if (desc != null) {
-				brokers.put(desc.getId(), new MessageBroker(desc.getId(), desc.getUri(), desc.getMq(), hostType));
+				brokers.put(desc.getId(), new MessageBroker(desc.getId(), desc.getUri(), desc.getMq(), hostType, notifier));
 			}
 		}
 		this.hostType = hostType;
@@ -48,20 +52,26 @@ public class MessageHub {
 	}
 
 	public MessageHub(String uri, String hostType) throws MessageException {
+		this(uri, hostType, null);
+	}
+	
+	public MessageHub(String uri, String hostType, Notifier notifier) throws MessageException {
+		if(uri == null || uri.trim().isEmpty())
+			throw new MessageException("Given URI is Invalid:" + uri);
 		this.hostType = hostType;
-		brokers.put(DEFAULT_BROKER, new MessageBroker(DEFAULT_BROKER, uri, MqBuilder.ActiveMQ, hostType));
+		brokers.put(DEFAULT_BROKER, new MessageBroker(DEFAULT_BROKER, uri, MqBuilder.ActiveMQ, hostType, notifier));
 	}
 
 	public String getMqUrl() {
 		String url = null;
-		if(brokers.containsKey(DEFAULT_BROKER)) {
+		if (brokers.containsKey(DEFAULT_BROKER)) {
 			url = brokers.get(DEFAULT_BROKER).getUri();
-		}else {
+		} else {
 			url = brokers.values().iterator().next().getUri();
 		}
 		return url;
 	}
-	
+
 	public String getHostType() {
 		return hostType;
 	}
@@ -150,32 +160,31 @@ public class MessageHub {
 		try {
 			if (message.propertyExists(propertyName))
 				switch (defaultValue.getClass().getSimpleName()) {
-				case "String":
-					return (V) message.getStringProperty(propertyName);
-				case "Integer":
-					return (V) new Integer(message.getIntProperty(propertyName));
-				case "Long":
-					return (V) new Long(message.getLongProperty(propertyName));
-				case "Boolean":
-					return (V) new Boolean(message.getBooleanProperty(propertyName));
-				case "Float":
-					return (V) new Float(message.getFloatProperty(propertyName));
-				case "Double":
-					return (V) new Double(message.getDoubleProperty(propertyName));
-				case "Byte":
-					return (V) new Byte(message.getByteProperty(propertyName));
-				case "Short":
-					return (V) new Short(message.getShortProperty(propertyName));
-				default:
-					return (V) message.getObjectProperty(propertyName);
+					case "String":
+						return (V) message.getStringProperty(propertyName);
+					case "Integer":
+						return (V) new Integer(message.getIntProperty(propertyName));
+					case "Long":
+						return (V) new Long(message.getLongProperty(propertyName));
+					case "Boolean":
+						return (V) new Boolean(message.getBooleanProperty(propertyName));
+					case "Float":
+						return (V) new Float(message.getFloatProperty(propertyName));
+					case "Double":
+						return (V) new Double(message.getDoubleProperty(propertyName));
+					case "Byte":
+						return (V) new Byte(message.getByteProperty(propertyName));
+					case "Short":
+						return (V) new Short(message.getShortProperty(propertyName));
+					default:
+						return (V) message.getObjectProperty(propertyName);
 				}
 			else {
 				return defaultValue;
 			}
 		} catch (Exception ex) {
-			throw new MessageException("Get Property[" + propertyName + "] as "
-					+ defaultValue.getClass().getSimpleName() + " from message failed.Default value:" + defaultValue,
-					ex);
+			throw new MessageException("Get Property[" + propertyName + "] as " + defaultValue.getClass().getSimpleName()
+					+ " from message failed.Default value:" + defaultValue, ex);
 		}
 	}
 
@@ -201,28 +210,27 @@ public class MessageHub {
 		try {
 			if (message.propertyExists(propertyName))
 				switch (clazz.getSimpleName()) {
-				case "String":
-					return (V) message.getStringProperty(propertyName);
-				case "Integer":
-					return (V) new Integer(message.getIntProperty(propertyName));
-				case "Long":
-					return (V) new Long(message.getLongProperty(propertyName));
-				case "Boolean":
-					return (V) new Boolean(message.getBooleanProperty(propertyName));
-				case "Float":
-					return (V) new Float(message.getFloatProperty(propertyName));
-				case "Double":
-					return (V) new Double(message.getDoubleProperty(propertyName));
-				case "Byte":
-					return (V) new Byte(message.getByteProperty(propertyName));
-				case "Short":
-					return (V) new Short(message.getShortProperty(propertyName));
-				default:
-					return (V) message.getObjectProperty(propertyName);
+					case "String":
+						return (V) message.getStringProperty(propertyName);
+					case "Integer":
+						return (V) new Integer(message.getIntProperty(propertyName));
+					case "Long":
+						return (V) new Long(message.getLongProperty(propertyName));
+					case "Boolean":
+						return (V) new Boolean(message.getBooleanProperty(propertyName));
+					case "Float":
+						return (V) new Float(message.getFloatProperty(propertyName));
+					case "Double":
+						return (V) new Double(message.getDoubleProperty(propertyName));
+					case "Byte":
+						return (V) new Byte(message.getByteProperty(propertyName));
+					case "Short":
+						return (V) new Short(message.getShortProperty(propertyName));
+					default:
+						return (V) message.getObjectProperty(propertyName);
 				}
 		} catch (Exception ex) {
-			throw new MessageException("Get Property[" + propertyName + "] as " + clazz.getSimpleName()
-					+ " from message failed.", ex);
+			throw new MessageException("Get Property[" + propertyName + "] as " + clazz.getSimpleName() + " from message failed.", ex);
 		}
 		return (V) null;
 	}
@@ -243,32 +251,32 @@ public class MessageHub {
 			return;
 		try {
 			switch (value.getClass().getSimpleName()) {
-			case "String":
-				message.setStringProperty(key, (String) value);
-				break;
-			case "Integer":
-				message.setIntProperty(key, (Integer) value);
-				break;
-			case "Long":
-				message.setLongProperty(key, (Long) value);
-				break;
-			case "Boolean":
-				message.setBooleanProperty(key, (Boolean) value);
-				break;
-			case "Float":
-				message.setFloatProperty(key, (Float) value);
-				break;
-			case "Double":
-				message.setDoubleProperty(key, (Double) value);
-				break;
-			case "Byte":
-				message.setByteProperty(key, (Byte) value);
-				break;
-			case "Short":
-				message.setShortProperty(key, (Short) value);
-				break;
-			default:
-				message.setObjectProperty(key, value);
+				case "String":
+					message.setStringProperty(key, (String) value);
+					break;
+				case "Integer":
+					message.setIntProperty(key, (Integer) value);
+					break;
+				case "Long":
+					message.setLongProperty(key, (Long) value);
+					break;
+				case "Boolean":
+					message.setBooleanProperty(key, (Boolean) value);
+					break;
+				case "Float":
+					message.setFloatProperty(key, (Float) value);
+					break;
+				case "Double":
+					message.setDoubleProperty(key, (Double) value);
+					break;
+				case "Byte":
+					message.setByteProperty(key, (Byte) value);
+					break;
+				case "Short":
+					message.setShortProperty(key, (Short) value);
+					break;
+				default:
+					message.setObjectProperty(key, value);
 			}
 		} catch (Exception ex) {
 			throw new MessageException("Set Message property failed. Name:" + key + ", value:" + value, ex);
@@ -287,8 +295,8 @@ public class MessageHub {
 	 * @return
 	 * @throws MessageException
 	 */
-	public Pipe bindHandlers(String brokerName, Type type, String name, String messageSelector,
-			MessageListener listener, MessageFilter... filters) throws MessageException {
+	public Pipe bindHandlers(String brokerName, Type type, String name, String messageSelector, MessageListener listener, MessageFilter... filters)
+			throws MessageException {
 		return bindHandlers(brokerName, type, name, messageSelector, listener, null, filters);
 	}
 
@@ -306,8 +314,8 @@ public class MessageHub {
 	 * @return
 	 * @throws MessageException
 	 */
-	public Pipe bindHandlers(String brokerName, Type type, String name, String messageSelector,
-			MessageListener listener, OutputStream tracker, MessageFilter... filters) throws MessageException {
+	public Pipe bindHandlers(String brokerName, Type type, String name, String messageSelector, MessageListener listener, OutputStream tracker,
+			MessageFilter... filters) throws MessageException {
 		return getBroker(brokerName).bindHandlers(type, name, messageSelector, listener, tracker, filters);
 	}
 
@@ -330,8 +338,7 @@ public class MessageHub {
 	 * @param content
 	 * @param properties
 	 */
-	public void send(String brokerName, String pipeName, String content, HashMap<String, Object> properties)
-			throws MessageException {
+	public void send(String brokerName, String pipeName, String content, HashMap<String, Object> properties) throws MessageException {
 		try {
 			MessageBroker broker = getBroker(brokerName);
 			if (broker != null) {
@@ -351,8 +358,8 @@ public class MessageHub {
 				}
 			}
 		} catch (Exception ex) {
-			throw new MessageException("Send message fail,broker=" + brokerName + ",pipe=" + pipeName + ",content="
-					+ content + ",properties=" + CommonUtils.toJson(properties), ex);
+			throw new MessageException("Send message fail,broker=" + brokerName + ",pipe=" + pipeName + ",content=" + content + ",properties="
+					+ CommonUtils.toJson(properties), ex);
 		}
 	}
 
@@ -374,8 +381,7 @@ public class MessageHub {
 					send(broker.getId(), pipeName, content, properties);
 			}
 		} catch (Exception ex) {
-			throw new MessageException("Send message fail,pipe=" + pipeName + ",content=" + content + ",properties="
-					+ CommonUtils.toJson(properties), ex);
+			throw new MessageException("Send message fail,pipe=" + pipeName + ",content=" + content + ",properties=" + CommonUtils.toJson(properties), ex);
 		}
 	}
 

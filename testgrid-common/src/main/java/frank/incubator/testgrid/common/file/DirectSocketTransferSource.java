@@ -34,7 +34,7 @@ import frank.incubator.testgrid.common.log.LogUtils;
  */
 public final class DirectSocketTransferSource extends Thread implements FileTransferSource {
 
-	private Map<String,Map<String, File>> filelist = new HashMap<String, Map<String,File>>();
+	private Map<String, Map<String, File>> filelist = new HashMap<String, Map<String, File>>();
 	private ServerSocket server;
 	private String host;
 	private int port;
@@ -61,20 +61,20 @@ public final class DirectSocketTransferSource extends Thread implements FileTran
 	public void run() {
 		try {
 			switch (mode) {
-			case SOURCE_HOST:
-				server = new ServerSocket(port);
-				log.info("Start hosting on Port:" + port);
-				while (running) {
-					Socket socket = server.accept();
-					log.info("Incoming request from:" + socket.getRemoteSocketAddress());
-					handle(socket);
-				}
-				break;
-			/*
-			 * case ACCEPT: handleActive( host, port ); break;
-			 */
-			default:
-				break;
+				case SOURCE_HOST:
+					server = new ServerSocket(port);
+					log.info("Start hosting on Port:" + port);
+					while (running) {
+						Socket socket = server.accept();
+						log.info("Incoming request from:" + socket.getRemoteSocketAddress());
+						handle(socket);
+					}
+					break;
+				/*
+				 * case ACCEPT: handleActive( host, port ); break;
+				 */
+				default:
+					break;
 			}
 		} catch (IOException e) {
 			System.err.print("Socket connect break," + e.getMessage());
@@ -95,18 +95,9 @@ public final class DirectSocketTransferSource extends Thread implements FileTran
 		try {
 			in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
 			incomingToken = in.readUTF();
-			/*StringBuilder sb = new StringBuilder(50);
-			try {
-				for(int i=0;i<33;i++) {
-					sb.append(in.readChar());
-				}
-			}catch(EOFException ex) {
-				log.error("Read token chars failed. ex:" + ex.getMessage());
-			}
-			String incomingToken = new String(sb.toString());*/ 
 			log.info("Receiving an incoming token:" + incomingToken);
 			if (filelist.containsKey(incomingToken)) { // valid request.
-				Map<String,File> fs = filelist.get(incomingToken);
+				Map<String, File> fs = filelist.get(incomingToken);
 				os = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
 				os.writeInt(Constants.VALIDATION_SUCC);
 				os.flush();
@@ -140,15 +131,15 @@ public final class DirectSocketTransferSource extends Thread implements FileTran
 				os = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
 				os.writeInt(Constants.VALIDATION_FAIL);
 				os.flush();
-				log.info("Validate incoming token failed, current incoming token is {}, current support tokens is {}", incomingToken, CommonUtils.toJson(filelist.keySet()));
+				log.info("Validate incoming token failed, current incoming token is {}, current support tokens is {}", incomingToken,
+						CommonUtils.toJson(filelist.keySet()));
 			}
 		} catch (IOException e) {
-			log.error("handle incoming request met problem. incomingToken:"+ incomingToken, e);
+			log.error("handle incoming request met problem. incomingToken:" + incomingToken, e);
 		} finally {
 			CommonUtils.closeQuietly(os);
 			CommonUtils.closeQuietly(in);
 			CommonUtils.closeQuietly(socket);
-			// dispose();
 		}
 	}
 
@@ -157,13 +148,13 @@ public final class DirectSocketTransferSource extends Thread implements FileTran
 		log.info("Start to publish files with token:{}", token);
 		if (fileList == null || fileList.isEmpty())
 			throw new NullPointerException("No file provided to be published.");
-		if(filelist == null)
-			filelist = new HashMap<String, Map<String,File>>();
-		if(filelist.containsKey(token)) {
-			filelist.remove(token).clear();;
+		if (filelist == null)
+			filelist = new HashMap<String, Map<String, File>>();
+		if (filelist.containsKey(token)) {
+			filelist.remove(token).clear();
 		}
-		filelist.put(token, new HashMap<String,File>());
-		Map<String,File> fs = filelist.get(token);
+		filelist.put(token, new HashMap<String, File>());
+		Map<String, File> fs = filelist.get(token);
 		for (File file : fileList) {
 			if (!file.exists())
 				throw new FileNotFoundException("File:" + file + " didn't exists");
@@ -236,7 +227,6 @@ public final class DirectSocketTransferSource extends Thread implements FileTran
 			CommonUtils.closeQuietly(os);
 			CommonUtils.closeQuietly(in);
 			CommonUtils.closeQuietly(socket);
-			// dispose();
 		}
 	}
 

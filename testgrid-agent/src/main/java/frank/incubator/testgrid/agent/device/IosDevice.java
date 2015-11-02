@@ -7,33 +7,23 @@ import frank.incubator.testgrid.common.model.Device;
 
 public class IosDevice extends Device {
 
-	private IosDeviceStatus status;
-
 	public IosDevice(String id) {
 		super(id);
-		status = new IosDeviceStatus(id);
+		setStatus(new IosDeviceStatus(id));
 		this.addAttribute(Constants.DEVICE_PLATFORM, Constants.PLATFORM_IOS);
 	}
 
 	public IosDevice() {
 		super();
-		status = new IosDeviceStatus(id);
+		setStatus(new IosDeviceStatus(id));
 		this.addAttribute(Constants.DEVICE_PLATFORM, Constants.PLATFORM_IOS);
-	}
-
-	public IosDeviceStatus getStatus() {
-		return status;
-	}
-
-	public void setStatus(IosDeviceStatus status) {
-		this.status = status;
 	}
 
 	@Override
 	public void setAttributes(Map<String, Object> attributes) {
 		super.setAttributes(attributes);
 		if (attributes.containsKey(Constants.DEVICE_SN)) {
-			this.status.setId(this.id);
+			this.getStatus().setId(this.id);
 		}
 	}
 
@@ -41,14 +31,14 @@ public class IosDevice extends Device {
 	public <T extends Object> void addAttribute(String key, T value) {
 		super.addAttribute(key, value);
 		if (Constants.DEVICE_SN.equals(key)) {
-			this.status.setId(this.id);
+			this.getStatus().setId(this.id);
 		}
 	}
 
 	@Override
 	public void setId(String id) {
 		super.setId(id);
-		this.status.setId(id);
+		this.getStatus().setId(id);
 	}
 
 	@Override

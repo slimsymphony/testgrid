@@ -96,7 +96,7 @@ public abstract class FileWatchService extends Thread {
 
 	void processEvents() {
 		for (;;) {
-			if(runFlag) {
+			if (runFlag) {
 				WatchKey key;
 				try {
 					key = watcher.take();
@@ -126,8 +126,8 @@ public abstract class FileWatchService extends Thread {
 					}
 				}
 			}
-			
-			if(exitFlag)
+
+			if (exitFlag)
 				break;
 		}
 	}
@@ -140,19 +140,19 @@ public abstract class FileWatchService extends Thread {
 	@Override
 	public void start() {
 		runFlag = true;
-		if(this.getState() == State.NEW)
+		if (this.getState() == State.NEW)
 			super.start();
 	}
-	
+
 	public void dispose() {
 		exitFlag = true;
 	}
-	
+
 	@Override
 	public void run() {
 		processEvents();
 	}
-	
+
 	public void pause() {
 		runFlag = false;
 	}

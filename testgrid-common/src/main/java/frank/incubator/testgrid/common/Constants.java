@@ -12,12 +12,17 @@ public class Constants {
 	 * Device default Config file name.
 	 */
 	public static final String DEVICE_CONFIG_FILE = "devices.json";
-	
+
 	/**
 	 * Default execution console output log file name.
 	 */
 	public static final String EXEC_CONSOLE_OUTPUT = "stdout.log";
-	
+
+	/**
+	 * Default execution timeline file name.
+	 */
+	public static final String EXEC_TIMELINE_OUTPUT = "timeline.txt";
+
 	/**
 	 * Split Task and Test Id when set to device status.
 	 */
@@ -192,6 +197,14 @@ public class Constants {
 	 */
 	public static final int MSG_TASK_START = 5;
 	/**
+	 * Message Type: Client confirm Test *was* FINISHED.
+	 */
+	public static final int MSG_TEST_FINISH_CONFIRM = 6;
+	/**
+	 * Message Type: Client request to subscrbe test.
+	 */
+	public static final int MSG_TASK_SUBSCRIBE = 7;
+	/**
 	 * Message Type: One side ask another side to start fetching artifacts.
 	 */
 	public static final int MSG_START_FT_FETCH = 9;
@@ -200,10 +213,6 @@ public class Constants {
 	 */
 	public static final int MSG_TEST_FINISHED = 0;
 
-	/**
-	 * Message Type: Client confirm Test *was* FINISHED.
-	 */
-	public static final int MSG_TEST_FINISH_CONFIRM = 6;
 	/**
 	 * Message Type: Agent notify client the test have failed.
 	 */
@@ -262,7 +271,7 @@ public class Constants {
 	/**
 	 * Message Attribute: task
 	 */
-	//public static final String MSG_HEAD_TASK = "Task";
+	// public static final String MSG_HEAD_TASK = "Task";
 
 	/**
 	 * Message Attribute: test
@@ -633,9 +642,9 @@ public class Constants {
 
 	// ======= Device Attributes ======
 	public static final String PLATFORM_ANDROID = "ANDROID";
-	
+
 	public static final String PLATFORM_IOS = "IOS";
-	
+
 	public static final String DEVICE_HOST = "host";
 
 	public static final String DEVICE_IMEI = "imei";
@@ -687,25 +696,27 @@ public class Constants {
 	public static final String DEVICE_EXCLUDE_PREFIX = "exclude.";
 
 	public static final String DEVICE_HOST_OS_TYPE = "hostOsType";
-	
+
 	public static final String DEVICE_PLATFORM = "platform";
-	
+
 	public static final String DEVICE_PLATFORM_VERSION = "platform_version";
-	
+
 	public static final String DEVICE_MANUFACTURER = "manufacturer";
-	
+
 	public static final String DEVICE_RESOLUTION = "resolution";
-	
+
 	public static final String DEVICE_DPI = "dpi";
-	
+
 	public static final String DEVICE_IP_WLAN = "ip_wlan";
+
+	public static final String DEVICE_ISROOT = "is_root";
+
+	public static final String DEVICE_ATTRIBUTE_WILDCARD = "%*%";
+
+	public static final String DEVICE_ATTRIBUTE_OR = "%OR%";
 	
-	public static final String DEVICE_ISROOT ="is_root";
-	
-	public static final String DEVICE_ATTRIBUTE_WILDCARD ="%*%";
-	
-	public static final String DEVICE_ATTRIBUTE_OR ="%OR%";
-	
+	public static final String DEVICE_ATTRIBUTE_NOT = "%NOT%";
+
 	/*
 	 * Some predefined Env parameters.
 	 */
@@ -716,6 +727,11 @@ public class Constants {
 	 * several items for describing the config items;
 	 */
 	public static final String AGENT_CONFIG_DUP_WORKSPACE_BACKUP = "duplicate_workspace_backup";
+	/**
+	 * DEFAULT DEVICE ATTRIBUTES WHICH AUTOMATICALLY APPEND TO ALL DEVICES ON
+	 * CURRENT AGENT.
+	 */
+	public static final String AGENT_CONFIG_DEVICE_DEFAULT_ATTRS = "default_attributes";
 	/**
 	 * More detail could be collected from device side.
 	 */
@@ -735,6 +751,10 @@ public class Constants {
 	public static final String AGENT_CONFIG_DISABLE_HOSTNAME = "disable_hostname";
 	public static final String AGENT_CONFIG_DISABLE_ANDROID_DETECTOR = "android_detector_disable";
 	public static final String AGENT_CONFIG_DEVICE_DETECT_INTERVAL = "device_detect_interval";
+	public static final String AGENT_CONFIG_ENABLE_NOTIFICATION = "enable_notification";
+	public static final String AGENT_CONFIG_NOTIFICATION_CHARSET = "notification_charset";
+	public static final String AGENT_CONFIG_NOTIFICATION_URL = "notification_url";
+	public static final String AGENT_CONFIG_NOTIFICATION_RECEIVERS = "notification_receivers";
 	/**
 	 * Resource Name of plugin configuration file.
 	 */
@@ -758,6 +778,8 @@ public class Constants {
 	public static final String MSG_HEAD_FT_ARTIFACTS = "FtArtifacts";
 
 	public static final String MSG_HEAD_FT_TARGETFOLDER = "FtTargetFolder";
+	
+	public static final String MSG_HEAD_FT_ARTIFACT_REMOVE = "FtArtifactRemove";
 
 	public static final int MSG_HEAD_FT_NEGO = 0;
 
@@ -776,12 +798,25 @@ public class Constants {
 	public static final int MSG_HEAD_FT_TIMEOUT = 7;
 
 	public static final int MSG_HEAD_FT_CANCEL = 8;
-
+	
+	public static final int MSG_HEAD_FT_SKIP = 9;
+	
 	public static final String OS_WINDOWS_SERIES = "WINDOWS";
 
 	public static final String OS_UNIX_SERIES = "UNIX_LIKE";
 
 	public static final String OS_MAC = "MAC";
-	
+
 	public static final String MQ_URL = "MQ_URL";
+
+	public static final String TIMELINE_PUBLISH_TEST = "test_publish";
+
+	public static final String TIMELINE_DEVICE_RESERVE = "device_selection";
+
+	public static final String TIMELINE_SEND_ARTIFACTS = "artifact_transfer";
+
+	public static final String TIMELINE_FINISH_TEST = "test_execution";
+
+	public static final String AGENT_CONFIG_WORKSPACE_TESTFOLDER_KEEPDAYS = "test_folder_keep_days";
+
 }

@@ -43,105 +43,128 @@ public class PkgInstallController extends HttpServlet {
 		boolean result = false;
 		File pkg = null;
 		String sn = null;
-		boolean isMultipart = ServletFileUpload.isMultipartContent(request);
-		if (!isMultipart) {
-			if (request.getParameter("workspace") != null) {
-				workspace = new File(request.getParameter("workspace"));
-			} else {
-				response.sendError(HttpStatus.SC_METHOD_FAILURE, "Invalid request Type[ not multipart]");
-			}
-			return;
-		}
-		DiskFileItemFactory factory = new DiskFileItemFactory();
-		// maximum size that will be stored in memory
-		factory.setSizeThreshold(maxMemSize);
-		// Location to save data that is larger than maxMemSize.
-		if (workspace == null)
-			workspace = new File("workspace");
-		factory.setRepository(workspace);
-
-		// Create a new file upload handler
-		ServletFileUpload upload = new ServletFileUpload(factory);
-		// maximum file size to be uploaded.
-		upload.setSizeMax(maxFileSize);
+		String url = null;
+		String fileExt = null;
 		String token = CommonUtils.generateToken(5);
-		try {
-			// Parse the request to get file items.
-			List<FileItem> fileItems = upload.parseRequest(request);
-			// Process the uploaded file items
-			Iterator<FileItem> i = fileItems.iterator();
-			File file = null;
-			FileItem fi = null;
-			String filePath = null;
-			File tokenFolder = null;
-			while (i.hasNext()) {
-				fi = i.next();
-				if (fi.isFormField()) {
-					String fieldName = fi.getFieldName();
-					if (fieldName.equalsIgnoreCase("token")) {
-						filePath = fi.getString();
-						tokenFolder = new File(workspace, filePath);
-						if (tokenFolder.exists()) {
-							if (tokenFolder.isDirectory())
-								FileUtils.deleteDirectory(tokenFolder);
-							else
-								tokenFolder.delete();
+		File tokenFolder = null;
+		boolean isMultipart = ServletFileUpload.isMultipartContent(request);
+		if (request.getParameter("workspace") != null) {
+			workspace = new File(request.getParameter("workspace"));
+		}
+		if (!isMultipart) {
+			sn = request.getParameter("sn");
+			url = request.getParameter("url");
+			fileExt = request.getParameter("ext");
+			if(sn != null && url != null && fileExt != null && !sn.isEmpty() && !url.isEmpty() && !fileExt.isEmpty()) {
+				sn = sn.trim();
+				url = url.trim();
+				fileExt = fileExt.trim();
+				log.info("Got request to download and install pkg. sn:{} fileExt:{} url:{}", sn, fileExt, url);
+				tokenFolder = new File(workspace, sn);
+				if(!tokenFolder.exists() || tokenFolder.isFile()) {
+					tokenFolder.mkdirs();
+				}
+				String fileName = token + "_pkg." + fileExt;
+				pkg = new File(tokenFolder, fileName);
+				log.info("Begin to download pkg file from:{} to:{}", url, pkg);
+				CommonUtils.downloadFileTo(url, pkg);
+				log.info("Download pkg file result:{}", pkg.exists());
+			}else{
+				response.sendError(HttpStatus.SC_METHOD_FAILURE, "Invalid request Type[ not multipart]");
+				return;
+			}
+		}else {
+			DiskFileItemFactory factory = new DiskFileItemFactory();
+			// maximum size that will be stored in memory
+			factory.setSizeThreshold(maxMemSize);
+			// Location to save data that is larger than maxMemSize.
+			if (workspace == null)
+				workspace = new File("workspace");
+			factory.setRepository(workspace);
+	
+			// Create a new file upload handler
+			ServletFileUpload upload = new ServletFileUpload(factory);
+			// maximum file size to be uploaded.
+			upload.setSizeMax(maxFileSize);
+			
+			try {
+				// Parse the request to get file items.
+				List<FileItem> fileItems = upload.parseRequest(request);
+				// Process the uploaded file items
+				Iterator<FileItem> i = fileItems.iterator();
+				File file = null;
+				FileItem fi = null;
+				String filePath = null;
+				while (i.hasNext()) {
+					fi = i.next();
+					if (fi.isFormField()) {
+						String fieldName = fi.getFieldName();
+						if (fieldName.equalsIgnoreCase("token")) {
+							filePath = fi.getString();
+							tokenFolder = new File(workspace, filePath);
+							if (tokenFolder.exists()) {
+								if (tokenFolder.isDirectory())
+									FileUtils.deleteDirectory(tokenFolder);
+								else
+									tokenFolder.delete();
+							}
+							tokenFolder.mkdirs();
+							log.info("current task folder is :{}", tokenFolder.getAbsolutePath());
+							break;
+						} else if (fieldName.equalsIgnoreCase("sn")) {
+							sn = fi.getString().trim();
 						}
-						tokenFolder.mkdirs();
-						log.info("current task folder is :" + tokenFolder.getAbsolutePath());
-						break;
-					}else if(fieldName.equalsIgnoreCase("sn")) {
-						sn = fi.getString().trim();
 					}
 				}
-			}
-			
-			if(tokenFolder == null || !tokenFolder.exists()) {
-				if(sn != null && !sn.trim().isEmpty()) {
-					tokenFolder = new File(workspace,sn);
-				}else {
-					tokenFolder = new File(workspace,CommonUtils.generateToken(6));
-				}
-				if(!tokenFolder.exists())
-					tokenFolder.mkdirs();
-			}
-
-			i = fileItems.iterator();
-			while (i.hasNext()) {
-				fi = i.next();
-				if (!fi.isFormField()) {
-					// Get the uploaded file parameters
-					String fileName = fi.getName();//.replaceAll("\\\\", "/");
-					String ext = fileName.substring(fileName.lastIndexOf(".")+1);
-					//fileName = fileName.replaceAll("\\s", "_");
-					fileName = token + "_pkg." + ext;
-					// Write the file
-					/*if (fileName.lastIndexOf("/") >= 0) {
-						file = new File(tokenFolder, fileName.substring(fileName.lastIndexOf("/")));
+	
+				if (tokenFolder == null || !tokenFolder.exists()) {
+					if (sn != null && !sn.trim().isEmpty()) {
+						tokenFolder = new File(workspace, sn);
 					} else {
-						file = new File(tokenFolder, fileName.substring(fileName.lastIndexOf("/") + 1));
-					}*/
-					file = new File(tokenFolder, fileName);
-					fi.write(file);
-					log.info("Uploaded Filename: " + fileName);
-					if(file != null && file.exists() && file.length()>0)
-						pkg = file;
+						tokenFolder = new File(workspace, CommonUtils.generateToken(6));
+					}
+					if (!tokenFolder.exists())
+						tokenFolder.mkdirs();
 				}
+	
+				i = fileItems.iterator();
+				while (i.hasNext()) {
+					fi = i.next();
+					if (!fi.isFormField()) {
+						// Get the uploaded file parameters
+						String fileName = fi.getName();// .replaceAll("\\\\", "/");
+						String ext = fileName.substring(fileName.lastIndexOf(".") + 1);
+						// fileName = fileName.replaceAll("\\s", "_");
+						fileName = token + "_pkg." + ext;
+						// Write the file
+						/*
+						 * if (fileName.lastIndexOf("/") >= 0) { file = new
+						 * File(tokenFolder,
+						 * fileName.substring(fileName.lastIndexOf("/"))); } else {
+						 * file = new File(tokenFolder,
+						 * fileName.substring(fileName.lastIndexOf("/") + 1)); }
+						 */
+						file = new File(tokenFolder, fileName);
+						fi.write(file);
+						log.info("Uploaded Filename: {}", fileName);
+						if (file != null && file.exists() && file.length() > 0)
+							pkg = file;
+					}
+				}
+			} catch (Exception ex) {
+				log.error("Got exception when receiving uploding files.", ex);
+				response.sendError(HttpStatus.SC_INTERNAL_SERVER_ERROR, "Got exception when receiving uploding files:" + ex.getMessage());
 			}
-		} catch (Exception ex) {
-			log.error("Got exception when receiving uploding files.", ex);
-			response.sendError(HttpStatus.SC_INTERNAL_SERVER_ERROR,
-					"Got exception when receiving uploding files:" + ex.getMessage());
 		}
-		
-		if(pkg != null && sn != null) {
+
+		if (pkg != null && sn != null) {
 			// begin to install
 			// 1. create install description
 			// 2. wait for result file
 			// 3. if over timeout return fail to user
 			// 4. if result file exists, give response back to user
 			File taskFolder = new File(workspace, "tasks");
-			File resultFolder = new File(workspace, "results"); 
+			File resultFolder = new File(workspace, "results");
 			FileOutputStream fos = null;
 			try {
 				fos = new FileOutputStream(new File(taskFolder, sn + ".properties"));
@@ -150,33 +173,33 @@ public class PkgInstallController extends HttpServlet {
 				fos.write(sb.toString().getBytes("UTF-8"));
 				fos.flush();
 				CommonUtils.closeQuietly(fos);
-				if(!resultFolder.exists()) {
+				if (!resultFolder.exists()) {
 					resultFolder.mkdirs();
 				}
-				
+
 				long start = System.currentTimeMillis();
 				long timeout = Constants.ONE_MINUTE * 5;
 				File resultFile = null;
-				while((System.currentTimeMillis() - start) <timeout) {
-					for(File f : resultFolder.listFiles()) {
-						if(f.isFile() && f.getName().equalsIgnoreCase(token + "_" + sn + ".properties")) {
+				while ((System.currentTimeMillis() - start) < timeout) {
+					for (File f : resultFolder.listFiles()) {
+						if (f.isFile() && f.getName().equalsIgnoreCase(token + "_" + sn + ".properties")) {
 							resultFile = f;
 							break;
 						}
 					}
-					if(resultFile == null)
+					if (resultFile == null)
 						TimeUnit.SECONDS.sleep(5);
 					else
 						break;
 				}
-				if(resultFile != null) {
+				if (resultFile != null) {
 					Properties props = new Properties();
 					props.load(new StringReader(CommonUtils.readFileContent(resultFile)));
-					if(props.containsKey("success")) {
+					if (props.containsKey("success")) {
 						result = CommonUtils.parseBoolean(props.get("success").toString());
 					}
 				}
-			}catch(Exception ex) {
+			} catch (Exception ex) {
 				log.error("Write Task file failed", ex);
 			}
 		}
@@ -185,8 +208,8 @@ public class PkgInstallController extends HttpServlet {
 			response.setCharacterEncoding("UTF-8");
 			response.setContentType("application/json; charset=UTF-8");
 			w = response.getWriter();
-			w.write("{\"success\":"+result+"}");
-		}finally {
+			w.write("{\"success\":" + result + "}");
+		} finally {
 			CommonUtils.closeQuietly(w);
 			FileUtils.deleteQuietly(pkg);
 		}

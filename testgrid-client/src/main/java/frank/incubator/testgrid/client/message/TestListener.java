@@ -23,23 +23,28 @@ import frank.incubator.testgrid.common.model.Test;
  */
 public class TestListener extends PropertyMessageFilter {
 
-	@SuppressWarnings("serial")
 	public TestListener(final Test test, String host, OutputStream tracker) {
+		this(test, host, tracker, true);
+	}
+
+	@SuppressWarnings("serial")
+	public TestListener(final Test test, String host, OutputStream tracker, boolean needLog) {
 		this(test, host, new HashMap<String, Object>() {
 			{
 				this.put(Constants.MSG_HEAD_TESTID, test.getId());
 				this.put(Constants.MSG_HEAD_CONTENT, Constants.MSG_CONTENT_TEXT);
 			}
-		}, tracker);
+		}, tracker, needLog);
 	}
 
-	public TestListener(Test test, String host, Map<String, Object> critiera, OutputStream tracker) {
+	public TestListener(Test test, String host, Map<String, Object> critiera, OutputStream tracker, boolean needLog) {
 		super(critiera);
 		this.test = test;
 		this.start = System.currentTimeMillis();
 		this.hostAgent = host;
 		this.tracker = tracker;
-		this.log = LogUtils.get("TestListener[" + test.getTaskID()+ "(" + test.getId() + ")]");
+		if (needLog)
+			this.log = LogUtils.get("TestListener[" + test.getTaskID() +"_"  + test.getId() + "]");
 	}
 
 	private long start;
@@ -70,8 +75,8 @@ public class TestListener extends PropertyMessageFilter {
 					boolean first = true;
 					for (String s : text.split("\n")) {
 						if (first) {
-							sb.append(CommonUtils.getTime()).append(test.getTaskID()).append("[").append(test.getId())
-									.append(" from:" + hostAgent + "]>  ").append(text).append("\n");
+							sb.append(CommonUtils.getTime()).append(test.getTaskID()).append("[").append(test.getId()).append(" from:" + hostAgent + "]>  ")
+									.append(text).append("\n");
 							tracker.write(sb.toString().getBytes("UTF-8"));
 							tracker.flush();
 							log.info(sb.toString());
@@ -84,8 +89,8 @@ public class TestListener extends PropertyMessageFilter {
 						}
 					}
 				} else {
-					sb.append(CommonUtils.getTime()).append(test.getTaskID()).append("[").append(test.getId())
-							.append(" from:" + hostAgent + "]>  ").append(text).append("\n");
+					sb.append(CommonUtils.getTime()).append(test.getTaskID()).append("[").append(test.getId()).append(" from:" + hostAgent + "]>  ")
+							.append(text).append("\n");
 					tracker.write(sb.toString().getBytes("UTF-8"));
 					tracker.flush();
 					log.info(sb.toString());
@@ -98,6 +103,10 @@ public class TestListener extends PropertyMessageFilter {
 
 	public long getStart() {
 		return start;
+	}
+
+	public void setStart(long newStart) {
+		this.start = newStart;
 	}
 
 	public String getHostAgent() {

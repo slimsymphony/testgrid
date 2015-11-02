@@ -54,15 +54,15 @@ public final class AndroidDeviceDetector extends DeviceDetector {
 	public boolean rebootDevice(String sn) {
 		log.warn("Device[{}] will be rebooted", sn);
 		StringBuilder sb = new StringBuilder();
-		String output = exec(adb()+" -s " + sn + " reboot", null, 2000L, sb, log.getLog());
-		if(sb.toString().equals("true") && output.trim().isEmpty()) {
+		String output = exec(adb() + " -s " + sn + " reboot", null, 2000L, sb, log.getLog());
+		if (sb.toString().equals("true") && output.trim().isEmpty()) {
 			log.warn("Device[{}] reboot success", sn);
 			return true;
 		}
 		log.warn("Device[{}] reboot failed", sn);
 		return false;
 	}
-	
+
 	public boolean restartAdb() {
 		log.warn("Begin to restart ADB");
 		try {
@@ -82,11 +82,11 @@ public final class AndroidDeviceDetector extends DeviceDetector {
 			}
 
 			pid = isAdbAlive();
-			
+
 			if (pid > 0) {
 				log.warn("ADB restart succ");
 				return true;
-			}else {
+			} else {
 				log.warn("ADB restart failed");
 				return false;
 			}
@@ -122,7 +122,7 @@ public final class AndroidDeviceDetector extends DeviceDetector {
 			while ((line = br.readLine()) != null) {
 				try {
 					line = line.trim();
-					if(line.trim().isEmpty())
+					if (line.trim().isEmpty())
 						continue;
 					if (line.indexOf("device") > 0 && line.endsWith("device")) {
 						sn = line.substring(0, line.indexOf("device")).trim();
@@ -152,7 +152,7 @@ public final class AndroidDeviceDetector extends DeviceDetector {
 
 	private Map<String, String> parseProps(String str) {
 		Map<String, String> props = new HashMap<String, String>();
-		if(str != null) {
+		if (str != null) {
 			BufferedReader br = new BufferedReader(new StringReader(str));
 			String line = null;
 			try {
@@ -188,16 +188,17 @@ public final class AndroidDeviceDetector extends DeviceDetector {
 	private Device getDeviceInfo(String sn) throws Exception {
 		AndroidDevice p = new AndroidDevice();
 		p.addAttribute(Constants.DEVICE_SN, sn);
-		AndroidDeviceStatus stat = p.getStatus();
-		
+		AndroidDeviceStatus stat = (AndroidDeviceStatus) p.getStatus();
+
 		StringBuilder sb = new StringBuilder();
 		String propstr = exec(adb() + " -s " + sn + " shell getprop", null, 3000L, sb, log.getLog());
-		if(sb.toString().equals("false")) {
+		if (sb.toString().equals("false")) {
 			log.warn("Get device[{}] props failed timeout.", sn);
-			// not normally finished. try to confirm, if still same issue, try to reboot the device and restart adb
+			// not normally finished. try to confirm, if still same issue, try
+			// to reboot the device and restart adb
 			sb = new StringBuilder();
-			exec(adb()+" -s " + sn +" shell pwd", null, 2000L, sb, log.getLog());
-			if(sb.toString().equals("false")) {
+			exec(adb() + " -s " + sn + " shell pwd", null, 2000L, sb, log.getLog());
+			if (sb.toString().equals("false")) {
 				restartAdb();
 				rebootDevice(sn);
 			}
@@ -221,16 +222,14 @@ public final class AndroidDeviceDetector extends DeviceDetector {
 		}
 
 		p.addAttribute(Constants.DEVICE_IMEI, imei);
-		/*String rmcode = props.get("ro.product.name");
-		if (rmcode == null || rmcode.isEmpty()) {
-			rmcode = props.get("ro.product.rmcode");
-			if (rmcode == null || rmcode.isEmpty()) {
-				// rmcode = props.get( "ro.product.name" );
-				rmcode = "UNKNOWN";
-			}
-		}
-
-		p.addAttribute(Constants.DEVICE_RMCODE, rmcode);*/
+		/*
+		 * String rmcode = props.get("ro.product.name"); if (rmcode == null ||
+		 * rmcode.isEmpty()) { rmcode = props.get("ro.product.rmcode"); if
+		 * (rmcode == null || rmcode.isEmpty()) { // rmcode = props.get(
+		 * "ro.product.name" ); rmcode = "UNKNOWN"; } }
+		 * 
+		 * p.addAttribute(Constants.DEVICE_RMCODE, rmcode);
+		 */
 		// p.addAttribute(Constants.DEVICE_HWTYPE,
 		// props.get("ro.product.hw.id"));
 		p.addAttribute(Constants.DEVICE_SWVERSION, props.get("apps.setting.product.swversion"));
@@ -257,7 +256,7 @@ public final class AndroidDeviceDetector extends DeviceDetector {
 			p.addAttribute(Constants.DEVICE_SIM2_OPERATORCODE, props.get("gsm.sim2.operator.numeric"));
 			p.addAttribute(Constants.DEVICE_SIM2_OPERATORCOUNTRY, props.get("gsm.sim2.operator.iso-country"));
 		}
-		
+
 		log.info("sim1 ready:{}, sim2 ready:{}", sim1ok, sim2ok);
 		String resolution = null;
 		String dpi = null;
@@ -268,7 +267,7 @@ public final class AndroidDeviceDetector extends DeviceDetector {
 			} else {
 				output = exec(adb() + " -s " + sn + " shell dumpsys window displays|grep dpi", null, 3000L, log.getLog());
 			}
-			
+
 			if (output != null) {
 				output = output.trim();
 				output = output.substring(output.indexOf("init=") + 5, output.indexOf("dpi"));
@@ -282,17 +281,20 @@ public final class AndroidDeviceDetector extends DeviceDetector {
 			log.error("Get Device[" + sn + "] resolution&dpi failed.");
 		}
 
-		if(props.get("dhcp.wlan0.ipaddress") != null && !props.get("dhcp.wlan0.ipaddress").trim().isEmpty()) {
+		if (props.get("dhcp.wlan0.ipaddress") != null && !props.get("dhcp.wlan0.ipaddress").trim().isEmpty()) {
 			p.addAttribute(Constants.DEVICE_IP_WLAN, props.get("dhcp.wlan0.ipaddress").trim());
-		}else {
+		} else {
 			output = null;
 			try {
 				output = exec(adb() + " -s " + sn + " shell ifconfig wlan0", null, 3000L, log.getLog());
 				if (output != null) {
-	
+
 					output = output.trim();
 					if (output.contains("ip")) {
 						output = output.substring(output.indexOf("ip") + 2, output.indexOf("mask")).trim();
+						p.addAttribute(Constants.DEVICE_IP_WLAN, output.trim());
+					} else if (output.contains("inet addr:")) {
+						output = output.substring(output.indexOf("inet addr:") + 10, output.indexOf("Bcast:")).trim();
 						p.addAttribute(Constants.DEVICE_IP_WLAN, output.trim());
 					}
 				}
@@ -300,7 +302,6 @@ public final class AndroidDeviceDetector extends DeviceDetector {
 				log.error("Get Wlan ip address[" + sn + "] resolution&dpi failed.");
 			}
 		}
-		
 
 		String memInfo = exec(adb() + " -s " + sn + " shell cat /proc/meminfo", null, 3000L, log.getLog());
 		String line = null;
@@ -325,15 +326,13 @@ public final class AndroidDeviceDetector extends DeviceDetector {
 		} catch (Exception ex) {
 			log.error("Extract meminfo failed.", ex);
 		}
-		/*boolean isRoot = false;
-		try {
-			String rootOutput = exec(adb() + " -s " + sn + " root", null, 3000L, log.getLog());
-			if (rootOutput != null && rootOutput.indexOf("is already running as root") > 0)
-				isRoot = true;
-		} catch (Exception ex) {
-			log.error("Check isRoot failed.", ex);
-		}
-		p.addAttribute(Constants.DEVICE_ISROOT, isRoot);*/
+		/*
+		 * boolean isRoot = false; try { String rootOutput = exec(adb() + " -s "
+		 * + sn + " root", null, 3000L, log.getLog()); if (rootOutput != null &&
+		 * rootOutput.indexOf("is already running as root") > 0) isRoot = true;
+		 * } catch (Exception ex) { log.error("Check isRoot failed.", ex); }
+		 * p.addAttribute(Constants.DEVICE_ISROOT, isRoot);
+		 */
 		// Get More detail info and device status if agent permitted.
 		if (CommonUtils.parseBoolean((String) AgentNode.getConfig(Constants.AGENT_CONFIG_DEVICE_DETECT_MORE_DETAIL))) {
 			/*

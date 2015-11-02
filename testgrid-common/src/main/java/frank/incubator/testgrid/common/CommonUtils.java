@@ -13,8 +13,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.PrintStream;
+import java.io.RandomAccessFile;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -29,6 +29,7 @@ import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -109,28 +110,11 @@ public final class CommonUtils {
 	private static final GsonBuilder gb = new GsonBuilder();
 	static {
 		gb.serializeNulls();
-		/*
-		 * gb.registerTypeAdapter( new
-		 * TypeToken<Map<String,Object>>(){}.getType(), new
-		 * JsonSerializer<Map<String,Object>>() {
-		 * 
-		 * @Override public JsonElement serialize( Map<String, Object> src, Type
-		 * typeOfSrc, JsonSerializationContext context ) { JsonObject je = new
-		 * JsonObject(); JsonArray ja = new JsonArray(); if( src == null )
-		 * return null; JsonObject item = null; String key = null; Object val =
-		 * null; for( Map.Entry<String, Object> entry : src.entrySet() ) { item
-		 * = new JsonObject(); key = entry.getKey(); val = entry.getValue(); if(
-		 * val != null && val instanceof Integer ) { item.addProperty( key,
-		 * (Integer)val ); } else { item.add( key, context.serialize(val) ); }
-		 * ja.add( item ); } return je; }});
-		 */
-
 		gb.registerTypeAdapter(new TypeToken<Map<String, Object>>() {
 		}.getType(), new JsonDeserializer<Map<String, Object>>() {
 
 			@Override
-			public Map<String, Object> deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
-					throws JsonParseException {
+			public Map<String, Object> deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
 				Map<String, Object> map = new HashMap<String, Object>();
 				Iterator<Entry<String, JsonElement>> it = json.getAsJsonObject().entrySet().iterator();
 				Entry<String, JsonElement> item = null;
@@ -157,8 +141,7 @@ public final class CommonUtils {
 
 		gb.registerTypeAdapter(FileTransferChannel.class, new JsonDeserializer<FileTransferChannel>() {
 			@Override
-			public FileTransferChannel deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
-					throws JsonParseException {
+			public FileTransferChannel deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
 				FileTransferChannel ftc = null;
 				JsonObject jo = json.getAsJsonObject();
 				int priority = 100;
@@ -177,21 +160,21 @@ public final class CommonUtils {
 				if (jo.has("lastUpdated"))
 					lastUpdated = jo.get("lastUpdated").getAsLong();
 				switch (id) {
-				case "SOCKET":
-					ftc = new DirectSocketFTChannel();
-					break;
-				case "FTP":
-					ftc = new FtpFTChannel();
-					break;
-				case "HTTPGET":
-					ftc = new HttpGetFTChannel();
-					break;
-				case "HTTPPUT":
-					ftc = new HttpPutFTChannel();
-					break;
-				case "NFS":
-					ftc = new NfsFTChannel();
-					break;
+					case "SOCKET":
+						ftc = new DirectSocketFTChannel();
+						break;
+					case "FTP":
+						ftc = new FtpFTChannel();
+						break;
+					case "HTTPGET":
+						ftc = new HttpGetFTChannel();
+						break;
+					case "HTTPPUT":
+						ftc = new HttpPutFTChannel();
+						break;
+					case "NFS":
+						ftc = new NfsFTChannel();
+						break;
 				}
 				if (ftc != null) {
 					ftc.setLastUpdated(lastUpdated);
@@ -211,7 +194,7 @@ public final class CommonUtils {
 		gb.registerTypeAdapter(type, typeAdapter);
 		json2 = gb.create();
 	}
-	
+
 	public static String toJsonDefault(Object o) {
 		if (o == null)
 			return "{}";
@@ -243,7 +226,7 @@ public final class CommonUtils {
 			JsonReader reader = new JsonReader(new StringReader(jsonStr));
 			reader.setLenient(true);
 			return json.fromJson(reader, t);
-		}catch(Exception ex) {
+		} catch (Exception ex) {
 			ex.printStackTrace();
 			return null;
 		}
@@ -256,7 +239,7 @@ public final class CommonUtils {
 			JsonReader reader = new JsonReader(new StringReader(jsonStr));
 			reader.setLenient(true);
 			return json2.fromJson(reader, t);
-		}catch(Exception ex) {
+		} catch (Exception ex) {
 			ex.printStackTrace();
 			return null;
 		}
@@ -269,7 +252,7 @@ public final class CommonUtils {
 			JsonReader reader = new JsonReader(new StringReader(jsonStr));
 			reader.setLenient(true);
 			return json.fromJson(reader, type);
-		}catch(Exception ex) {
+		} catch (Exception ex) {
 			ex.printStackTrace();
 			return null;
 		}
@@ -282,7 +265,7 @@ public final class CommonUtils {
 			JsonReader reader = new JsonReader(new StringReader(jsonStr));
 			reader.setLenient(true);
 			return json2.fromJson(reader, type);
-		}catch(Exception ex) {
+		} catch (Exception ex) {
 			ex.printStackTrace();
 			return null;
 		}
@@ -429,9 +412,20 @@ public final class CommonUtils {
 	}
 
 	public static String getErrorStack(Throwable t) {
-		StringWriter sw = new StringWriter();
-		t.printStackTrace(new PrintWriter(sw));
-		return sw.toString();
+		return getErrorStack(t, Charset.defaultCharset().name());
+	}
+
+	public static String getErrorStack(Throwable t, String charset) {
+		Charset cset = Charset.forName(charset);
+		cset = (cset == null) ? Charset.defaultCharset() : cset;
+		ByteArrayOutputStream bao = new ByteArrayOutputStream();
+		t.printStackTrace(new PrintStream(bao));
+		closeQuietly(bao);
+		try {
+			return new String(bao.toByteArray(), charset);
+		} catch (UnsupportedEncodingException e) {
+			return new String(bao.toByteArray());
+		}
 	}
 
 	public static void rollback(Connection conn) {
@@ -449,13 +443,13 @@ public final class CommonUtils {
 			LogUtils.error("Connection Set autocommit option failed. value=" + val, e);
 		}
 	}
-	
+
 	public static String exec(String cmd, String workDir) throws IOException, InterruptedException {
-		return exec(cmd, workDir, (String)null);
+		return exec(cmd, workDir, Charset.defaultCharset().name());
 	}
 
 	public static String exec(String cmd, String workDir, String charset) throws IOException, InterruptedException {
-
+		charset = (charset == null) ? Charset.defaultCharset().name() : charset;
 		ProcessBuilder pb = null;
 
 		if (isWindows()) {
@@ -485,10 +479,7 @@ public final class CommonUtils {
 				sos.write(data, 0, read);
 			}
 			result = p.waitFor();
-			if(charset == null || charset.trim().isEmpty())
-				output = sos.toString();
-			else
-				output = sos.toString(charset);
+			output = sos.toString(charset);
 		} finally {
 			try {
 				in.close();
@@ -501,18 +492,19 @@ public final class CommonUtils {
 			LogUtils.debug("Exec [" + cmd + "] @" + workDir + " failed!");
 		return output;
 	}
-	
+
 	public static String exec(final String cmd, final String workDir, long timeout, final Logger logger) {
-		return exec(cmd, workDir, timeout, null, logger, null);
+		return exec(cmd, workDir, timeout, null, logger, Charset.defaultCharset().name());
 	}
-	
+
 	public static String exec(final String cmd, final String workDir, long timeout, StringBuilder isFinish, final Logger logger) {
-		return exec(cmd, workDir, timeout, isFinish, logger, null);
+		return exec(cmd, workDir, timeout, isFinish, logger, Charset.defaultCharset().name());
 	}
-	
-	public static String exec(final String cmd, final String workDir, long timeout, StringBuilder isFinish, final Logger logger, final String charset) {
-		if(logger != null)
-			logger.info("Executing:" + cmd+" ,under:"+workDir+", with timeout:" + TimeUnit.SECONDS.convert(timeout, TimeUnit.MILLISECONDS));
+
+	public static String exec(final String cmd, final String workDir, long timeout, StringBuilder isFinish, final Logger logger, String charset) {
+		if (logger != null)
+			logger.info("Executing:" + cmd + " ,under:" + workDir + ", with timeout:" + TimeUnit.SECONDS.convert(timeout, TimeUnit.MILLISECONDS));
+		final String charsetF = (charset == null) ? Charset.defaultCharset().name() : charset;
 		final StringBuilder output = new StringBuilder(200);
 		Runnable r = new Runnable() {
 			@Override
@@ -545,15 +537,12 @@ public final class CommonUtils {
 						sos.write(data, 0, read);
 					}
 					result = p.waitFor();
-					if(charset == null || charset.trim().isEmpty())
-						output.append(sos.toString());
-					else
-						output.append(sos.toString(charset));
-				} catch(Exception ex) {
+					output.append(sos.toString(charsetF));
+				} catch (Exception ex) {
 					output.append(getErrorStack(ex));
-					if(logger != null) {
+					if (logger != null) {
 						logger.error("ExecCmd failed.", ex);
-					}else {
+					} else {
 						ex.printStackTrace();
 					}
 				} finally {
@@ -562,7 +551,7 @@ public final class CommonUtils {
 					} catch (Exception ex) {
 					}
 				}
-				if(logger != null) {
+				if (logger != null) {
 					if (result == 0)
 						logger.info("Exec [" + cmd + "] @" + workDir + " success!");
 					else
@@ -574,25 +563,24 @@ public final class CommonUtils {
 		Future<?> f = es.submit(r);
 		try {
 			f.get(timeout, TimeUnit.MILLISECONDS);
-			if(isFinish != null)
+			if (isFinish != null)
 				isFinish.append("true");
 		} catch (ExecutionException | TimeoutException | InterruptedException e) {
-			logger.error("Execute CMD["+cmd+"] failed", e);
-			if(isFinish != null)
+			logger.error("Execute CMD[" + cmd + "] failed", e);
+			if (isFinish != null)
 				isFinish.append("false");
-		}finally {
+		} finally {
 			es.shutdownNow();
 		}
 		return output.toString();
 	}
-	
-	public static String exec(String cmd, String workDir, Map<String, String> env) throws IOException,
-		InterruptedException {
-		return exec(cmd, workDir, env, null);
-	}
-	public static String exec(String cmd, String workDir, Map<String, String> env, String charset) throws IOException,
-			InterruptedException {
 
+	public static String exec(String cmd, String workDir, Map<String, String> env) throws IOException, InterruptedException {
+		return exec(cmd, workDir, env, Charset.defaultCharset().name());
+	}
+
+	public static String exec(String cmd, String workDir, Map<String, String> env, String charset) throws IOException, InterruptedException {
+		charset = (charset == null) ? Charset.defaultCharset().name() : charset;
 		ProcessBuilder pb = null;
 
 		if (isWindows()) {
@@ -637,10 +625,7 @@ public final class CommonUtils {
 				sos.write(data, 0, read);
 			}
 			result = p.waitFor();
-			if(charset == null || charset.trim().isEmpty())
-				output = sos.toString();
-			else
-				output = sos.toString(charset);
+			output = sos.toString(charset);
 		} finally {
 			try {
 				in.close();
@@ -654,8 +639,7 @@ public final class CommonUtils {
 		return output;
 	}
 
-	public static Process exec(String cmd, File workDir, Map<String, String> env) throws IOException,
-			InterruptedException {
+	public static Process exec(String cmd, File workDir, Map<String, String> env) throws IOException, InterruptedException {
 
 		ProcessBuilder pb = null;
 
@@ -692,7 +676,7 @@ public final class CommonUtils {
 		String os = System.getProperty("os.name");
 		if (os.toLowerCase().indexOf("win") >= 0)
 			return Constants.OS_WINDOWS_SERIES;
-		else if(os.toLowerCase().indexOf("mac")>=0)
+		else if (os.toLowerCase().indexOf("mac") >= 0)
 			return Constants.OS_MAC;
 		else
 			return Constants.OS_UNIX_SERIES;
@@ -738,7 +722,7 @@ public final class CommonUtils {
 	}
 
 	public static String getHostName() {
-		if(DISABLE_HOSTNAME)
+		if (DISABLE_HOSTNAME)
 			return getValidHostIp();
 		String hostName = "localhost";
 		try {
@@ -761,8 +745,7 @@ public final class CommonUtils {
 				Enumeration<InetAddress> inetAddresses = networkInterface.getInetAddresses();
 				while (inetAddresses.hasMoreElements()) {
 					InetAddress inetAddress = inetAddresses.nextElement();
-					if (inetAddress.getHostAddress().startsWith("10.")
-							|| inetAddress.getHostAddress().startsWith("172.")) {
+					if (inetAddress.getHostAddress().startsWith("10.") || inetAddress.getHostAddress().startsWith("172.")) {
 						IP = inetAddress.getHostAddress();
 						break;
 					}
@@ -776,18 +759,17 @@ public final class CommonUtils {
 		return IP;
 	}
 
-	public static int execBlocking(String line, Map<String, String> environment, StringBuilder output, long timeout)
+	public static int execBlocking(String line, Map<String, String> environment, StringBuilder output, long timeout) throws IOException {
+		return execBlocking(line, null, environment, output, timeout, Charset.defaultCharset().name());
+	}
+
+	public static int execBlocking(String line, File workDir, Map<String, String> environment, StringBuilder output, long timeout) throws IOException {
+		return execBlocking(line, workDir, environment, output, timeout, Charset.defaultCharset().name());
+	}
+
+	public static int execBlocking(String line, File workDir, Map<String, String> environment, StringBuilder output, long timeout, String charset)
 			throws IOException {
-		return execBlocking(line, null, environment, output, timeout, null);
-	}
-	
-	public static int execBlocking(String line, File workDir, Map<String, String> environment, StringBuilder output,
-			long timeout) throws IOException {
-		return execBlocking(line, workDir, environment, output, timeout, null);
-	}
-	
-	public static int execBlocking(String line, File workDir, Map<String, String> environment, StringBuilder output,
-			long timeout, String charset) throws IOException {
+		charset = (charset == null) ? Charset.defaultCharset().name() : charset;
 		if (environment != null) {
 			Map<String, String> sysenv = System.getenv();
 			for (String key : sysenv.keySet()) {
@@ -811,23 +793,18 @@ public final class CommonUtils {
 			executor.setWorkingDirectory(workDir);
 		int exitVal = executor.execute(CommandLine.parse(line), environment);
 		if (output != null) {
-			if(charset == null || charset.trim().isEmpty())
-				output.append(baos.toString());
-			else
-				output.append(baos.toString(charset));
-		}else {
-			if(charset == null || charset.trim().isEmpty())
-				System.out.println(baos.toString());
-			else
-				System.out.println(baos.toString(charset));
+			output.append(baos.toString(charset));
+		} else {
+			System.out.println(baos.toString(charset));
 		}
 
 		return exitVal;
 	}
 
 	public static String executeCmd(String cmd) {
-		return executeCmd(cmd, null);
+		return executeCmd(cmd, Charset.defaultCharset().name());
 	}
+
 	/**
 	 * Execute given command.
 	 * 
@@ -837,6 +814,7 @@ public final class CommonUtils {
 	 * @since Aug 20, 2012
 	 */
 	public static String executeCmd(String cmd, String charset) {
+		charset = (charset == null) ? Charset.defaultCharset().name() : charset;
 		ByteArrayOutputStream stdout = new ByteArrayOutputStream();
 		PumpStreamHandler psh = new PumpStreamHandler(stdout);
 		ExecuteWatchdog watchdog = new ExecuteWatchdog(10000);
@@ -852,28 +830,24 @@ public final class CommonUtils {
 		} catch (IOException e) {
 			System.err.println("Execute CMD [" + cmd + "] failed." + getErrorStack(e));
 		} finally {
-			System.err.println("Execute CMD [" + cmd + "], result:" + exitvalue);
+			System.out.println("Execute CMD [" + cmd + "], result:" + exitvalue);
 		}
-		if(charset ==null || charset.trim().isEmpty())
-			return stdout.toString();
-		else {
-			String output = "";
-			try {
-				output = stdout.toString(charset);
-			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-			}
-			return output;
+		String output = "";
+		try {
+			output = stdout.toString(charset);
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
 		}
+		return output;
 	}
 
-	public static ExecuteWatchdog execASync(String line, Map<String, String> environment, OutputStream output,
-			ExecuteResultHandler erh, long timeout) throws IOException {
+	public static ExecuteWatchdog execASync(String line, Map<String, String> environment, OutputStream output, ExecuteResultHandler erh, long timeout)
+			throws IOException {
 		return execASync(line, null, environment, output, erh, timeout);
 	}
 
-	public static ExecuteWatchdog execASync(String line, File workDir, Map<String, String> environment,
-			OutputStream output, ExecuteResultHandler erh, long timeout) throws IOException {
+	public static ExecuteWatchdog execASync(String line, File workDir, Map<String, String> environment, OutputStream output, ExecuteResultHandler erh,
+			long timeout) throws IOException {
 		if (environment != null) {
 			Map<String, String> sysenv = System.getenv();
 			for (String key : sysenv.keySet()) {
@@ -899,6 +873,33 @@ public final class CommonUtils {
 		return watchdog;
 	}
 	
+	public static ExecuteWatchdog execASync(String line, File workDir, Map<String, String> environment, OutputStream output, ExecuteResultHandler erh,
+			long timeout, Logger log) throws IOException {
+		if (environment != null) {
+			Map<String, String> sysenv = System.getenv();
+			for (String key : sysenv.keySet()) {
+				boolean contains = false;
+				for (String k : environment.keySet()) {
+					if (k.equalsIgnoreCase(key)) {
+						contains = true;
+						break;
+					}
+				}
+				if (!contains)
+					environment.put(key, sysenv.get(key));
+			}
+		}
+		DefaultExecutor executor = new DefaultExecutor();
+		if (workDir != null)
+			executor.setWorkingDirectory(workDir);
+		PumpStreamHandler sh = new PumpStreamHandler(output, output, null);
+		executor.setStreamHandler(sh);
+		ExecuteWatchdog watchdog = new ProcessTreeWatchDog(timeout, log);
+		executor.setWatchdog(watchdog);
+		executor.execute(CommandLine.parse(line), environment, erh);
+		return watchdog;
+	}
+
 	public static String toString(Collection<String> strings, String delima) {
 		StringBuilder sb = new StringBuilder();
 		if (strings != null && !strings.isEmpty()) {
@@ -941,40 +942,40 @@ public final class CommonUtils {
 			StringBuilder sb = new StringBuilder();
 			sb.append(CommonUtils.exec("wmic cpu get name,loadpercentage /value", null, 3000L, null));
 			status.put("cpu", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			sb.append(CommonUtils.exec("wmic LOGICALDISK get size,freespace /value", null, 3000L, null));
 			status.put("disk", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			sb.append(CommonUtils.exec("wmic OS get FreePhysicalMemory /value", null, 3000L, null));
 			sb.append("\n");
 			sb.append(CommonUtils.exec("wmic ComputerSystem get TotalPhysicalMemory /value", null, 3000L, null));
 			status.put("memory", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			sb.append(CommonUtils.exec("netstat -an", null, 3000L, null));
 			status.put("network", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			sb.append(CommonUtils.exec("wmic OS get Caption,CSDVersion,Version,CSName,Status /value", null, 3000L, null));
 			status.put("os", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			// CommonUtils.execBlocking(
 			// "wmic process get processid,commandline /value", null, sb, 3000L
 			// );
 			sb.append(CommonUtils.exec("tasklist", null, 3000L, null));
 			status.put("process", sb.toString().trim());
-		} else if(Constants.OS_MAC.equals(CommonUtils.getOsType())){
+		} else if (Constants.OS_MAC.equals(CommonUtils.getOsType())) {
 			StringBuilder sb = new StringBuilder();
 			sb.append(CommonUtils.exec("/bin/df -h", null, 3000L, null));
 			status.put("disk", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			sb.append(CommonUtils.exec("uname -a", null, 3000L, null));
 			status.put("os", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			sb.append(CommonUtils.exec("/bin/ps -ef", null, 3000L, null));
 			status.put("process", sb.toString().trim());
@@ -984,23 +985,23 @@ public final class CommonUtils {
 			sb.append("\n");
 			sb.append(CommonUtils.exec("vmstat |tail -n 1|awk \"{print $15}", null, 3000L, null));
 			status.put("cpu", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			sb.append(CommonUtils.exec("df -h", null, 3000L, null));
 			status.put("disk", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			sb.append(CommonUtils.exec("top -n 1|grep \"Mem\"", null, 3000L, null));
 			status.put("memory", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			sb.append(CommonUtils.exec("netstat -tulnp", null, 3000L, null));
 			status.put("network", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			sb.append(CommonUtils.exec("uname -a", null, 3000L, null));
 			status.put("os", sb.toString().trim());
-			
+
 			sb = new StringBuilder();
 			sb.append(CommonUtils.exec("ps -ef", null, 3000L, null));
 			status.put("process", sb.toString().trim());
@@ -1049,59 +1050,89 @@ public final class CommonUtils {
 	public static boolean killProcess(int pid) {
 		return killProcess(pid, false);
 	}
-	
+
 	public static int getPid(Process p) {
-	    int pid = 0;
+		int pid = 0;
 		Field f;
-	    if (isWindows()) {
-	    	if (p.getClass().getName().equals("java.lang.Win32Process") ||
-	    			   p.getClass().getName().equals("java.lang.ProcessImpl")) {
-	    		  /* determine the pid on windows plattforms */
-	    		  try {
-	    		    f = p.getClass().getDeclaredField("handle");
-	    		    f.setAccessible(true);				
-	    		    long handl = f.getLong(p);
-	    		    Kernel32 kernel = Kernel32.INSTANCE;
-	    		    W32API.HANDLE handle = new W32API.HANDLE();
-	    		    handle.setPointer(Pointer.createConstant(handl));
-	    		    pid = kernel.GetProcessId(handle);
-	    		  } catch (Throwable e) {				
-	    		  }
-	    		}
-	    } else {
-	        try {
-	            f = p.getClass().getDeclaredField("pid");
-	            f.setAccessible(true);
-	            pid = (Integer) f.get(p);
-	        } catch (Throwable ex) {
-	           ex.printStackTrace();
-	        }
-	    }
-	    return pid;
+		if (isWindows()) {
+			if (p.getClass().getName().equals("java.lang.Win32Process") || p.getClass().getName().equals("java.lang.ProcessImpl")) {
+				/* determine the pid on windows plattforms */
+				try {
+					f = p.getClass().getDeclaredField("handle");
+					f.setAccessible(true);
+					long handl = f.getLong(p);
+					Kernel32 kernel = Kernel32.INSTANCE;
+					W32API.HANDLE handle = new W32API.HANDLE();
+					handle.setPointer(Pointer.createConstant(handl));
+					pid = kernel.GetProcessId(handle);
+				} catch (Throwable e) {
+				}
+			}
+		} else {
+			try {
+				f = p.getClass().getDeclaredField("pid");
+				f.setAccessible(true);
+				pid = (Integer) f.get(p);
+			} catch (Throwable ex) {
+				ex.printStackTrace();
+			}
+		}
+		return pid;
+	}
+
+	public static boolean killProcess(int pid, boolean killSubprocess) {
+		return killProcess(pid, killSubprocess, null);
 	}
 	
-	public static boolean killProcess(int pid, boolean killSubprocess) {
+	public static boolean killProcess(int pid, boolean killSubprocess, Logger log) {
+		if(log != null) {
+			log.info("Killing pid:" + pid);
+		}
 		StringBuilder sb = new StringBuilder();
 		int ret = 0;
 		try {
-			if (isWindows()) {
-				if(killSubprocess) {
-					ret = execBlocking("taskkill /F /T /PID " + pid, null, sb, 3000L);
-				}else {
-					ret = execBlocking("taskkill /F /PID " + pid, null, sb, 3000L);
-				}
-			}else {
-				if(killSubprocess) {
-					ret = execBlocking("pkill -TERM -P "+pid, null, sb, 3000L);
-				}else{
-					ret = execBlocking("kill " + pid, null, sb, 3000L);
-				}
+			String osType = CommonUtils.getOsType();
+			switch(osType) {
+				case Constants.OS_WINDOWS_SERIES:
+					if (killSubprocess) {
+						ret = execBlocking("taskkill /F /T /PID " + pid, null, sb, 3000L);
+					} else {
+						ret = execBlocking("taskkill /F /PID " + pid, null, sb, 3000L);
+					}
+					break;
+				case Constants.OS_MAC:
+					if (killSubprocess) {
+						try {
+							ret = execBlocking("pkill -TERM -P " + pid, null, sb, 3000L);
+						}catch(Throwable t) {}
+						ret = execBlocking("kill -TERM " + pid, null, sb, 3000L);
+					} else {
+						ret = execBlocking("kill " + pid, null, sb, 3000L);
+					}
+					break;
+				case Constants.OS_UNIX_SERIES:
+					try {
+						ret = execBlocking("kill $(pstree " + pid + " -p -a -l | cut -d, -f2 |cut -d  -f1)", null, sb, 3000L);
+					}catch(Throwable t) {
+						try {
+							ret = execBlocking("pkill -TERM -P " + pid, null, sb, 3000L);
+						}catch(Throwable z) {}
+					}
+					break;
 			}
-			if (ret != 0)
-				System.err.println("Kill Process[" + pid + "] failed." + sb.toString());
+			if (ret != 0) {
+				if(log != null)
+					log.error("Kill Process[" + pid + "] failed." + sb.toString());
+				else
+					System.err.println("Kill Process[" + pid + "] failed." + sb.toString());
+			}
 		} catch (IOException e) {
-			System.err.println("Kill Process[" + pid + "] failed." + sb.toString());
-			e.printStackTrace();
+			if(log != null)
+				log.error("Kill Process[" + pid + "] failed."+sb.toString(), e);
+			else {
+				System.err.println("Kill Process[" + pid + "] failed." + sb.toString());
+				e.printStackTrace();
+			}
 			ret = -1;
 		}
 		return (ret == 0) ? true : false;
@@ -1112,44 +1143,64 @@ public final class CommonUtils {
 			return true;
 		return false;
 	}
-
-	public static boolean parseBoolean(String boolStr, boolean defaultValue) {
-		if(boolStr == null)
-			return false;
+	
+	public static boolean parseBoolean(Object boolStr, boolean defaultValue) {
+		if (boolStr == null)
+			return defaultValue;
 		try {
-			return Boolean.parseBoolean(boolStr);
+			return Boolean.parseBoolean(boolStr.toString());
 		} catch (Exception ex) {
 			return defaultValue;
 		}
 	}
 
-	public static int parseInt(String v, int backup) {
+	public static int parseInt(Object v, int backup) {
+		if(v == null)
+			return backup;
 		try {
-			return Integer.parseInt(v);
+			if(v instanceof Number)
+				return ((Number)v).intValue();
+			else 
+				return Integer.parseInt(v.toString());
 		} catch (Exception e) {
 			return backup;
 		}
 	}
 
-	public static long parseLong(String v, long backup) {
+	public static long parseLong(Object v, long backup) {
+		if(v == null)
+			return backup;
 		try {
-			return Long.parseLong(v);
+			if(v instanceof Number)
+				return ((Number)v).longValue();
+			else 
+				return Long.parseLong(v.toString());
 		} catch (Exception e) {
 			return backup;
 		}
 	}
 
-	public static Float parseFloat(String v, float backup) {
+	public static float parseFloat(Object v, float backup) {
+		if(v == null)
+			return backup;
 		try {
-			return Float.parseFloat(v);
+			if(v instanceof Number)
+				return ((Number)v).floatValue();
+			else 
+				return Float.parseFloat(v.toString());
 		} catch (Exception e) {
 			return backup;
 		}
 	}
 
-	public static Double parseDouble(String v, double backup) {
+	public static Double parseDouble(Object v, double backup) {
+		if(v == null)
+			return backup;
 		try {
-			return Double.parseDouble(v);
+			if(v instanceof Number)
+				return ((Number)v).doubleValue();
+			else 
+				return Double.parseDouble(v.toString());
 		} catch (Exception e) {
 			return backup;
 		}
@@ -1227,8 +1278,7 @@ public final class CommonUtils {
 		return UUID.randomUUID().toString();
 	}
 
-	public static String random(int count, int start, int end, boolean letters, boolean numbers, char[] chars,
-			Random random) {
+	public static String random(int count, int start, int end, boolean letters, boolean numbers, char[] chars, Random random) {
 		if (count == 0) {
 			return "";
 		} else if (count < 0) {
@@ -1562,14 +1612,12 @@ public final class CommonUtils {
 		if (obj == null)
 			return notNull(obj, true);
 
-		if (obj.getClass().isPrimitive() || isWrapperType(obj.getClass())
-				|| CharSequence.class.isAssignableFrom(obj.getClass()))
+		if (obj.getClass().isPrimitive() || isWrapperType(obj.getClass()) || CharSequence.class.isAssignableFrom(obj.getClass()))
 			return notNull(obj, true);
 
 		StringBuilder sb = new StringBuilder();
 		if (level == 0)
-			sb.append("<a href='javascript:void(0)' onclick='switcher(\"div" + counter
-					+ "\")'>&nbsp;switch&nbsp;</a><div id='div" + counter.getAndIncrement()
+			sb.append("<a href='javascript:void(0)' onclick='switcher(\"div" + counter + "\")'>&nbsp;switch&nbsp;</a><div id='div" + counter.getAndIncrement()
 					+ "' style='display:none' class='level" + level + "'>");
 		// Special for Test cloud.
 		if (obj instanceof BaseObject) {
@@ -1581,9 +1629,8 @@ public final class CommonUtils {
 				if (o != null) {
 					sb.append("<li>");
 					sb.append(
-							"<a href='javascript:void(0)' onclick='switcher(\"div" + counter
-									+ "\")'>&nbsp;switch&nbsp;</a><div id='div" + counter.getAndIncrement()
-									+ "' style='display:none' class='vallevel" + level + "'>")
+							"<a href='javascript:void(0)' onclick='switcher(\"div" + counter + "\")'>&nbsp;switch&nbsp;</a><div id='div"
+									+ counter.getAndIncrement() + "' style='display:none' class='vallevel" + level + "'>")
 							.append(renderToHtml(o, level + 1, counter)).append("</div>");
 					sb.append("</li>");
 				}
@@ -1592,12 +1639,10 @@ public final class CommonUtils {
 			for (Map.Entry o : (Set<Map.Entry>) ((Map) obj).entrySet()) {
 				if (o != null) {
 					sb.append("<li>");
-					sb.append("<span class='keylevel" + level + "'>")
-							.append(renderToHtml(o.getKey(), level + 1, counter)).append("</span>");
+					sb.append("<span class='keylevel" + level + "'>").append(renderToHtml(o.getKey(), level + 1, counter)).append("</span>");
 					sb.append(
-							" : <a href='javascript:void(0)' onclick='switcher(\"div" + counter
-									+ "\")'>&nbsp;switch&nbsp;</a><div id='div" + counter.getAndIncrement()
-									+ "' style='display:none' class='vallevel" + level + "'>")
+							" : <a href='javascript:void(0)' onclick='switcher(\"div" + counter + "\")'>&nbsp;switch&nbsp;</a><div id='div"
+									+ counter.getAndIncrement() + "' style='display:none' class='vallevel" + level + "'>")
 							.append(renderToHtml(o.getValue(), level + 1, counter)).append("</div>");
 					sb.append("</li>");
 				}
@@ -1607,17 +1652,14 @@ public final class CommonUtils {
 			Field[] parentFields = obj.getClass().getSuperclass().getDeclaredFields();
 			for (Field f : parentFields) {
 				// didn't render final/static, native and transient fields.
-				if (!Modifier.isTransient(f.getModifiers())
-						&& !(Modifier.isFinal(f.getModifiers()) && Modifier.isStatic(f.getModifiers()))
+				if (!Modifier.isTransient(f.getModifiers()) && !(Modifier.isFinal(f.getModifiers()) && Modifier.isStatic(f.getModifiers()))
 						&& !Modifier.isNative(f.getModifiers())) {
 					f.setAccessible(true);
-					sb.append("<li>").append("<span class='keylevel" + level + "'>").append(f.getName())
-							.append("</span>");
+					sb.append("<li>").append("<span class='keylevel" + level + "'>").append(f.getName()).append("</span>");
 					try {
 						sb.append(
-								" : <a href='javascript:void(0)' onclick='switcher(\"div" + counter
-										+ "\")'>&nbsp;switch&nbsp;</a><div id='div" + counter.getAndIncrement()
-										+ "' style='display:none' class='vallevel" + level + "'>")
+								" : <a href='javascript:void(0)' onclick='switcher(\"div" + counter + "\")'>&nbsp;switch&nbsp;</a><div id='div"
+										+ counter.getAndIncrement() + "' style='display:none' class='vallevel" + level + "'>")
 								.append(renderToHtml(f.get(obj), level + 1, counter)).append("</div>");
 					} catch (Exception e) {
 						LogUtils.error("Reflect model value failed.", e);
@@ -1629,17 +1671,14 @@ public final class CommonUtils {
 			for (Field f : selfFields) {
 				f.setAccessible(true);
 				// didn't render final/static, native and transient fields.
-				if (!Modifier.isTransient(f.getModifiers())
-						&& !(Modifier.isFinal(f.getModifiers()) && Modifier.isStatic(f.getModifiers()))
+				if (!Modifier.isTransient(f.getModifiers()) && !(Modifier.isFinal(f.getModifiers()) && Modifier.isStatic(f.getModifiers()))
 						&& !Modifier.isNative(f.getModifiers())) {
 					f.setAccessible(true);
-					sb.append("<li>").append("<span class='keylevel" + level + "'>").append(f.getName())
-							.append("</span>");
+					sb.append("<li>").append("<span class='keylevel" + level + "'>").append(f.getName()).append("</span>");
 					try {
 						sb.append(
-								" : <a href='javascript:void(0)' onclick='switcher(\"div" + counter
-										+ "\")'>&nbsp;switch&nbsp;</a><div id='div" + counter.getAndIncrement()
-										+ "' style='display:none' class='vallevel" + level + "'>")
+								" : <a href='javascript:void(0)' onclick='switcher(\"div" + counter + "\")'>&nbsp;switch&nbsp;</a><div id='div"
+										+ counter.getAndIncrement() + "' style='display:none' class='vallevel" + level + "'>")
 								.append(renderToHtml(f.get(obj), level + 1, counter)).append("</div>");
 					} catch (Exception e) {
 						LogUtils.error("Reflect failed when render", e);
@@ -1827,6 +1866,8 @@ public final class CommonUtils {
 				LogUtils.error("HttpGet given NUll URL. ", new NullPointerException());
 			return statusCode;
 		}
+		if (log != null)
+			log.info("Send http resquest to URL:{}", url);
 		CloseableHttpClient client = HttpClientBuilder.create().build();
 		HttpGet request = new HttpGet(url);
 		HttpResponse response = null;
@@ -1834,7 +1875,8 @@ public final class CommonUtils {
 			response = client.execute(request);
 			statusCode = response.getStatusLine().getStatusCode();
 			ByteArrayOutputStream bao = new ByteArrayOutputStream();
-			response.getEntity().writeTo(bao);
+			if (response.getEntity() != null)
+				response.getEntity().writeTo(bao);
 			String output = "HttpResponse: " + bao.toString("UTF-8");
 			if (log != null)
 				log.info(output);
@@ -1850,7 +1892,7 @@ public final class CommonUtils {
 		}
 		return statusCode;
 	}
-	
+
 	public static int httpGet(String url, Logger log) {
 		int statusCode = -1;
 		if (url == null || url.trim().isEmpty()) {
@@ -1860,6 +1902,8 @@ public final class CommonUtils {
 				LogUtils.error("HttpGet given NUll URL. ", new NullPointerException());
 			return statusCode;
 		}
+		if (log != null)
+			log.info("Send http resquest to URL:{}", url);
 		CloseableHttpClient client = HttpClientBuilder.create().build();
 		HttpGet request = new HttpGet(url);
 		HttpResponse response = null;
@@ -1867,7 +1911,8 @@ public final class CommonUtils {
 			response = client.execute(request);
 			statusCode = response.getStatusLine().getStatusCode();
 			ByteArrayOutputStream bao = new ByteArrayOutputStream();
-			response.getEntity().writeTo(bao);
+			if (response.getEntity() != null)
+				response.getEntity().writeTo(bao);
 			String output = "HttpResponse: " + bao.toString("UTF-8");
 			if (log != null)
 				log.info(output);
@@ -1883,7 +1928,7 @@ public final class CommonUtils {
 		}
 		return statusCode;
 	}
-	
+
 	public static int httpGet(String url, StringBuilder sb, Logger log) {
 		int statusCode = -1;
 		if (url == null || url.trim().isEmpty()) {
@@ -1893,6 +1938,8 @@ public final class CommonUtils {
 				LogUtils.error("HttpGet given NUll URL. ", new NullPointerException());
 			return statusCode;
 		}
+		if (log != null)
+			log.info("Send http resquest to URL:{}", url);
 		CloseableHttpClient client = HttpClientBuilder.create().build();
 		HttpGet request = new HttpGet(url);
 		HttpResponse response = null;
@@ -1900,8 +1947,11 @@ public final class CommonUtils {
 			response = client.execute(request);
 			statusCode = response.getStatusLine().getStatusCode();
 			ByteArrayOutputStream bao = new ByteArrayOutputStream();
-			response.getEntity().writeTo(bao);
+			if (response.getEntity() != null)
+				response.getEntity().writeTo(bao);
 			sb.append(bao.toString());
+			if(log != null)
+				log.info("http get get response status:{}, with response text:{}", statusCode, sb.toString());
 		} catch (Exception e) {
 			if (log != null)
 				log.error("HttpGet for " + url + " failed. ", e);
@@ -1911,22 +1961,6 @@ public final class CommonUtils {
 			CommonUtils.closeQuietly(client);
 		}
 		return statusCode;
-	}
-	
-	/**
-	 * Send a Http Post.
-	 * 
-	 * @param url
-	 * @param paramName
-	 * @param value
-	 * @param sb
-	 * @return
-	 */
-	public static int httpPost(String url, String paramName, String value, StringBuilder sb) {
-		List<NameValuePair> pairs = new ArrayList<NameValuePair>();
-		NameValuePair p = new BasicNameValuePair(paramName, value);
-		pairs.add(p);
-		return httpPost(url, pairs, "UTF-8", sb);
 	}
 
 	/**
@@ -1938,11 +1972,27 @@ public final class CommonUtils {
 	 * @param sb
 	 * @return
 	 */
-	public static int httpPost(String url, String paramName, String value, String encoding, StringBuilder sb) {
+	public static int httpPost(String url, String paramName, String value, StringBuilder sb, Logger ... logs) {
 		List<NameValuePair> pairs = new ArrayList<NameValuePair>();
 		NameValuePair p = new BasicNameValuePair(paramName, value);
 		pairs.add(p);
-		return httpPost(url, pairs, encoding, sb);
+		return httpPost(url, pairs, "UTF-8", sb, logs);
+	}
+
+	/**
+	 * Send a Http Post.
+	 * 
+	 * @param url
+	 * @param paramName
+	 * @param value
+	 * @param sb
+	 * @return
+	 */
+	public static int httpPost(String url, String paramName, String value, String encoding, StringBuilder sb, Logger ... logs) {
+		List<NameValuePair> pairs = new ArrayList<NameValuePair>();
+		NameValuePair p = new BasicNameValuePair(paramName, value);
+		pairs.add(p);
+		return httpPost(url, pairs, encoding, sb, logs);
 	}
 
 	/**
@@ -1953,14 +2003,14 @@ public final class CommonUtils {
 	 * @param sb
 	 * @return
 	 */
-	public static int httpPost(String url, Map<String, String> data, String encoding, StringBuilder sb) {
+	public static int httpPost(String url, Map<String, String> data, String encoding, StringBuilder sb, Logger ... logs) {
 		List<NameValuePair> pairs = new ArrayList<NameValuePair>();
 		NameValuePair p = null;
 		for (String key : data.keySet()) {
 			p = new BasicNameValuePair(key, data.get(key));
 			pairs.add(p);
 		}
-		return httpPost(url, pairs, encoding, sb);
+		return httpPost(url, pairs, encoding, sb, logs);
 	}
 
 	/**
@@ -1972,8 +2022,8 @@ public final class CommonUtils {
 	 * @return status code
 	 * @throws UnsupportedEncodingException
 	 */
-	public static int httpPost(String url, List<NameValuePair> data, String encoding, StringBuilder sb) {
-		return httpPost(url, null, data, encoding, sb);
+	public static int httpPost(String url, List<NameValuePair> data, String encoding, StringBuilder sb, Logger ... logs) {
+		return httpPost(url, null, data, encoding, sb, logs);
 	}
 
 	/**
@@ -1985,18 +2035,22 @@ public final class CommonUtils {
 	 * @return status code
 	 * @throws UnsupportedEncodingException
 	 */
-	public static int httpPost(String url, CookieStore store, List<NameValuePair> data, String encoding, StringBuilder sb) {
+	public static int httpPost(String url, CookieStore store, List<NameValuePair> data, String encoding, StringBuilder sb, Logger ... logs) {
 		int statusCode = -1;
 		if (url == null || url.trim().isEmpty()) {
 			if (sb != null)
 				sb.append("HttpPost given NUll URL. ");
 			return statusCode;
 		}
-		
+		Logger log = null;
+		if(logs != null && logs.length>0)
+			log = logs[0];
 		CloseableHttpClient client = HttpClientBuilder.create().setDefaultCookieStore(store).build();
 		HttpPost request = new HttpPost(url);
+		if(log != null)
+			log.info("Send http post to url:{}", url);
 		try {
-			if(encoding == null) {
+			if (encoding == null) {
 				encoding = "UTF-8";
 			}
 			request.setEntity(new UrlEncodedFormEntity(data, encoding));
@@ -2004,18 +2058,21 @@ public final class CommonUtils {
 			response = client.execute(request);
 			statusCode = response.getStatusLine().getStatusCode();
 			ByteArrayOutputStream bao = new ByteArrayOutputStream();
-			response.getEntity().writeTo(bao);
+			if (response.getEntity() != null)
+				response.getEntity().writeTo(bao);
 			if (sb != null)
 				sb.append(bao.toString("UTF-8"));
+			if(log != null)
+				log.info("http post get response status:{}, with response text:{}", statusCode, sb.toString());
 		} catch (Exception e) {
 			if (sb != null)
 				sb.append(getErrorStack(e));
-		}finally {
+		} finally {
 			CommonUtils.closeQuietly(client);
 		}
 		return statusCode;
 	}
-	
+
 	public static File downloadFileTo(String url, File target) {
 		if (url == null || url.trim().isEmpty()) {
 			return null;
@@ -2029,11 +2086,13 @@ public final class CommonUtils {
 			response = client.execute(request);
 			int statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode == 200) {
-				in = response.getEntity().getContent();
-				os = new FileOutputStream(target);
-				IOUtils.copy(in, os);
-				os.flush();
-				return target;
+				if (response.getEntity() != null) {
+					in = response.getEntity().getContent();
+					os = new FileOutputStream(target);
+					IOUtils.copy(in, os);
+					os.flush();
+					return target;
+				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -2044,7 +2103,7 @@ public final class CommonUtils {
 		}
 		return null;
 	}
-	
+
 	public static File downloadFile(String url, File base) {
 		if (url == null || url.trim().isEmpty()) {
 			return null;
@@ -2059,12 +2118,14 @@ public final class CommonUtils {
 			response = client.execute(request);
 			int statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode == 200) {
-				in = response.getEntity().getContent();
-				File target = new File(base, fileName);
-				os = new FileOutputStream(target);
-				IOUtils.copy(in, os);
-				os.flush();
-				return target;
+				if (response.getEntity() != null) {
+					in = response.getEntity().getContent();
+					File target = new File(base, fileName);
+					os = new FileOutputStream(target);
+					IOUtils.copy(in, os);
+					os.flush();
+					return target;
+				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -2075,120 +2136,168 @@ public final class CommonUtils {
 		}
 		return null;
 	}
-	
+
 	public static void writeFile(File dest, String content, String encoding) {
-		if(dest == null)
+		if (dest == null)
 			throw new NullPointerException("Write to File failed. destination file is NULL");
-		if(content == null)
+		if (content == null)
 			return;
-		if(encoding == null)
+		if (encoding == null)
 			encoding = "UTF-8";
 		FileOutputStream fos = null;
 		try {
 			fos = new FileOutputStream(dest);
 			fos.write(content.getBytes(encoding));
 			fos.flush();
-		}catch(Exception ex) {
-			throw new RuntimeException("write to File["+dest+"] failed.", ex);
-		}finally {
+		} catch (Exception ex) {
+			throw new RuntimeException("write to File[" + dest + "] failed.", ex);
+		} finally {
 			CommonUtils.closeQuietly(fos);
 		}
 	}
 	
+	public static boolean writeFile(File dest, String content, String encoding, Logger log){
+		if (dest == null) {
+			if(log != null)
+				log.error("Write to File failed. destination file is NULL.");
+			return false;
+		}
+		if (content == null) {
+			if(log != null)
+				log.warn("Write content is NULL. Do nothing");
+			return true;
+		}
+		if (encoding == null)
+			encoding = "UTF-8";
+		FileOutputStream fos = null;
+		try {
+			fos = new FileOutputStream(dest);
+			fos.write(content.getBytes(encoding));
+			fos.flush();
+			return true;
+		} catch (Exception ex) {
+			if(log != null)
+				log.error("write to File[" + dest + "] failed.content:"+content+",encoding:"+ encoding, ex);
+			else
+				ex.printStackTrace();
+		} finally {
+			CommonUtils.closeQuietly(fos);
+		}
+		return false;
+	}
+
 	public static String readFileContent(File file) {
 		return readFileContent(file, "UTF-8");
 	}
-	
+
 	public static String readFileContent(File file, String encoding) {
-		if(file == null || !file.exists()|| !file.isFile()) {
+		if (file == null || !file.exists() || !file.isFile()) {
 			return null;
 		}
 		FileInputStream fin = null;
-		OutputStreamWriter osw = null;
 		ByteArrayOutputStream baos = null;
 		try {
 			baos = new ByteArrayOutputStream();
-			osw = new OutputStreamWriter(baos, encoding);
 			fin = new FileInputStream(file);
-			IOUtils.copy(fin, osw);
-			osw.flush();
+			IOUtils.copy(fin, baos);
+			baos.flush();
 			String str = new String(baos.toByteArray(), encoding);
 			return str;
-		}catch(Exception ex) {
-			LogUtils.error("Read File["+file.getAbsolutePath()+"] failed.", ex);
-		}finally {
-			CommonUtils.closeQuietly(osw);
+		} catch (Exception ex) {
+			LogUtils.error("Read File[" + file.getAbsolutePath() + "] failed.", ex);
+		} finally {
 			CommonUtils.closeQuietly(baos);
 			CommonUtils.closeQuietly(fin);
 		}
 		return null;
 	}
-	
+
 	public static boolean equal(Object a, Object b) {
-		if(a == b)
+		if (a == b)
 			return true;
-		if(a == null || b == null)
+		if (a == null || b == null)
 			return false;
 		return a.equals(b);
 	}
-	
+
 	public static float checkLatency(String dest) {
 		float latency = -1;
-		if(dest != null && isReachable(dest)) {
+		if (dest != null && isReachable(dest)) {
 			StringBuilder sb = new StringBuilder();
 			int retCode = 0;
 			List<Float> secs = new ArrayList<Float>();
 			try {
-				if(CommonUtils.isWindows()) {
-					retCode = CommonUtils.execBlocking("ping -n 5 "+dest, null, sb, TimeUnit.SECONDS.toMillis(10));
-					if(retCode == 0) {
+				if (CommonUtils.isWindows()) {
+					retCode = CommonUtils.execBlocking("ping -n 5 " + dest, null, sb, TimeUnit.SECONDS.toMillis(10));
+					if (retCode == 0) {
 						String[] arr = sb.toString().split("\r\n");
-						if(arr != null) {
-							for(String line : arr) {
-								if(line.indexOf("=")>0 && line.indexOf("ms")>0) {
-									if(line.indexOf('<')>0) {
-										line = line.substring(line.indexOf('<')+1, line.indexOf("ms"));
-									}else {
-										line = line.substring(line.indexOf('=', line.indexOf('=')+1)+1, line.indexOf("ms"));
+						if (arr != null) {
+							for (String line : arr) {
+								if (line.indexOf("=") > 0 && line.indexOf("ms") > 0) {
+									if (line.indexOf('<') > 0) {
+										line = line.substring(line.indexOf('<') + 1, line.indexOf("ms"));
+									} else {
+										line = line.substring(line.indexOf('=', line.indexOf('=') + 1) + 1, line.indexOf("ms"));
 									}
 									float la = CommonUtils.parseFloat(line.trim(), 0);
-									if(la != 0)
+									if (la != 0)
 										secs.add(la);
-									if(secs.size() == 5)
+									if (secs.size() == 5)
 										break;
 								}
 							}
 						}
 					}
-				}else {
-					retCode = CommonUtils.execBlocking("ping -c 5 "+dest, null, sb, TimeUnit.SECONDS.toMillis(10));
-					if(retCode == 0) {
+				} else {
+					retCode = CommonUtils.execBlocking("ping -c 5 " + dest, null, sb, TimeUnit.SECONDS.toMillis(10));
+					if (retCode == 0) {
 						String[] arr = sb.toString().split("\n");
-						if(arr != null) {
-							for(String line : arr) {
-								if(line.indexOf("time=")>0 && line.indexOf("ms")>0) {
-									line = line.substring(line.indexOf("time=")+5, line.indexOf("ms"));
+						if (arr != null) {
+							for (String line : arr) {
+								if (line.indexOf("time=") > 0 && line.indexOf("ms") > 0) {
+									line = line.substring(line.indexOf("time=") + 5, line.indexOf("ms"));
 									float la = CommonUtils.parseFloat(line.trim(), 0);
-									if(la != 0)
+									if (la != 0)
 										secs.add(la);
-									if(secs.size() == 5)
+									if (secs.size() == 5)
 										break;
 								}
 							}
 						}
 					}
 				}
-				if(!secs.isEmpty()) {
+				if (!secs.isEmpty()) {
 					float sum = 0;
-					for(float f : secs) {
+					for (float f : secs) {
 						sum += f;
 					}
-					latency = sum/(float)secs.size();
+					latency = sum / (float) secs.size();
 				}
-			}catch(Exception ex) {
+			} catch (Exception ex) {
 				ex.printStackTrace();
 			}
 		}
 		return latency;
+	}
+
+	public static boolean appendContent2File(String timelineFile, String content, String encoding) {
+		if (timelineFile == null || content == null)
+			return false;
+		if (encoding == null)
+			encoding = "UTF-8";
+		RandomAccessFile f = null;
+		boolean result = false;
+		try {
+			f = new RandomAccessFile(timelineFile, "rw");
+			f.seek(f.length());
+			f.write(content.getBytes(encoding));
+			result = true;
+		} catch (Exception ex) {
+			System.err.println("Append content 2 file :" + timelineFile + " failed.");
+			ex.printStackTrace();
+		} finally {
+			CommonUtils.closeQuietly(f);
+		}
+		return result;
 	}
 }

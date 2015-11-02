@@ -82,7 +82,7 @@ public class LocalFileTransferTarget extends Thread implements FileTransferTarge
 		if (mode == FileTransferMode.TARGET_HOST) {
 			return accept(token, fileList, localDestDir);
 		} else {
-			log.info("Start transfer to target with mode:" + mode + ", token=" + token);
+			log.info("Start transfer to target with mode:{}, token:{}", mode, token);
 			Collection<File> files = new ArrayList<File>();
 			File remoteFolder = new File(remoteBase, token);
 			File t = null;
@@ -120,7 +120,7 @@ public class LocalFileTransferTarget extends Thread implements FileTransferTarge
 		if (mode != FileTransferMode.TARGET_HOST) {
 			return fetch(token, fileList, localDestDir);
 		} else {
-			log.info("Start transfer to target with mode:" + mode + ", token=" + token);
+			log.info("Start transfer to target with mode:{}, token={}", mode, token);
 			File localFolder = new File(localBase, token);
 			Collection<File> files = new ArrayList<File>();
 			long fl = 0;
@@ -140,9 +140,9 @@ public class LocalFileTransferTarget extends Thread implements FileTransferTarge
 				} else {
 					throw new Exception("File[" + fn + "] transfer failed.");
 				}
-				log.info("accept " + fn);
+				log.info("accept:{}", fn );
 			}
-			log.info("end of transfer to target with mode:" + mode + ", token=" + token);
+			log.info("end of transfer to target with mode:{}, token={}", mode, token);
 			return files;
 		}
 	}

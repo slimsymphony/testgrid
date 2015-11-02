@@ -5,9 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import frank.incubator.testgrid.common.model.BaseObject;
+import frank.incubator.testgrid.common.model.DeviceStatus;
 
-public class AndroidDeviceStatus extends BaseObject {
+public class AndroidDeviceStatus extends DeviceStatus {
 
 	public AndroidDeviceStatus(String id) {
 		this.id = id;

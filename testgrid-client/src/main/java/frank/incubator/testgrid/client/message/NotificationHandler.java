@@ -33,53 +33,49 @@ public class NotificationHandler extends MessageListenerAdapter {
 			log.info("Current Agent received a Notification Message coming from :" + from);
 			int mode = getProperty(msg, Constants.MSG_HEAD_NOTIFICATION_TYPE, 0);
 			int action = getProperty(msg, Constants.MSG_HEAD_NOTIFICATION_ACTION, 0);
+			String testId = getProperty(msg, Constants.MSG_HEAD_TESTID, "");
+			String taskId = getProperty(msg, Constants.MSG_HEAD_TASKID, "");
 			switch (mode) {
-			case Constants.NOTIFICATION_TEST:
-				String testId = getProperty(msg, Constants.MSG_HEAD_TESTID, "");
-				if (testId == null || testId.isEmpty()) {
-					log.warn("Didn't assign a test ID, no need to process. from:" + from);
+				case Constants.NOTIFICATION_TEST:
+					if (testId == null || testId.isEmpty()) {
+						log.warn("Didn't assign a test ID, no need to process. from:" + from);
+						break;
+					}
+					Test test = client.getTestById(testId);
+					if (test == null) {
+						log.warn("Test[" + taskId + Constants.TASK_TEST_SPLITER + testId + "] can't be found from current client, maybe it have been finished. no need to process. From:" + from);
+						break;
+					}
+					switch (action) {
+						case Constants.ACTION_TEST_CANCEL:
+							client.cancelTest(test, "Test been canclled by notification incoming from:" + from, false);
+							break;
+						default:
+							log.warn("Client Test Notification Handler didn't Support This Action currently:" + action);
+					}
 					break;
-				}
-				Test test = client.getTestById(testId);
-				if (test == null) {
-					log.warn("Test["
-							+ testId
-							+ "] can't be found from current client, maybe it have been finished. no need to process. From:"
-							+ from);
+				case Constants.NOTIFICATION_TASK:
+					if (!client.getTask().getId().equals(taskId)) {
+						log.warn("Task[" + taskId + "] didn't belong to current TaskClient. taskId:" + taskId + ", from:" + from);
+						break;
+					}
+					switch (action) {
+						case Constants.ACTION_TASK_CANCEL:
+							client.cancelTask("Task cancelled by notification incoming from:" + from);
+							break;
+						default:
+							log.warn("Client Task Notification Handler didn't Support This Action currently:" + action);
+					}
 					break;
-				}
-				switch (action) {
-				case Constants.ACTION_TEST_CANCEL:
-					client.cancelTest(test, "Test been canclled by notification incoming from:" + from);
+				case Constants.NOTIFICATION_SYSTEM:
+					switch (action) {
+						case Constants.ACTION_CLIENT_EXIT:
+							client.cancelTask("Task cancelled by notification incoming from:" + from);
+							break;
+						default:
+							log.warn("Client System Notification Handler didn't Support This Action currently:" + action);
+					}
 					break;
-				default:
-					log.warn("Client Test Notification Handler didn't Support This Action currently:" + action);
-				}
-				break;
-			case Constants.NOTIFICATION_TASK:
-				String taskId = getProperty(msg, Constants.MSG_HEAD_TASKID, "");
-				if (!client.getTask().getId().equals(taskId)) {
-					log.warn("Task[" + taskId + "] didn't belong to current TaskClient. taskId:" + taskId + ", from:"
-							+ from);
-					break;
-				}
-				switch (action) {
-				case Constants.ACTION_TASK_CANCEL:
-					client.cancelTask("Task cancelled by notification incoming from:" + from);
-					break;
-				default:
-					log.warn("Client Task Notification Handler didn't Support This Action currently:" + action);
-				}
-				break;
-			case Constants.NOTIFICATION_SYSTEM:
-				switch (action) {
-				case Constants.ACTION_CLIENT_EXIT:
-					client.cancelTask("Task cancelled by notification incoming from:" + from);
-					break;
-				default:
-					log.warn("Client System Notification Handler didn't Support This Action currently:" + action);
-				}
-				break;
 			}
 		} catch (Exception ex) {
 

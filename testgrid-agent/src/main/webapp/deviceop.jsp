@@ -9,24 +9,11 @@ String operation = request.getParameter("op");
 String id = request.getParameter("id");
 try{
 if("remove".equals(operation)){
-	for( Device d : dm.listDevices() ){
-		if( d.getId().equals(id) )
-			dm.removeDevice( d );
-	}
+	dm.removeDevice(dm.getDeviceById(id));
 }else if( "release".equals(operation) ){
-	for( Device d : dm.listDevices() ){
-		if( d.getId().equals(id) ){
-			d.setTaskStatus( "" );
-			d.setState( 0 );
-		}
-	}
+	dm.releaseDevices(dm.getDeviceById(id));
 }else if( "maintain".equals(operation)){
-	for( Device d : dm.listDevices() ){
-		if( d.getId().equals(id) ){
-			d.setState( Device.DEVICE_MAINTAIN );
-			break;
-		}
-	}
+	dm.setDeviceState(id, Device.DEVICE_MAINTAIN);
 }
 out.print("success");
 }catch(Exception ex){

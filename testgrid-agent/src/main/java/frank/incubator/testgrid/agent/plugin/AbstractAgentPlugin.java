@@ -61,7 +61,7 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	protected Map<String, Object> attributes;
 
 	protected int state = TestGridPlugin.IDLE;
-	
+
 	protected FileWatchService watcher;
 
 	public AbstractAgentPlugin() {
@@ -177,18 +177,18 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	public void setAttributes(Map<String, Object> attributes) {
 		this.attributes = attributes;
 	}
-	
+
 	public Object getAttribute(String key) {
 		return attributes.get(key);
 	}
-	
+
 	public Object getAttribute(String key, Object defaultValue) {
 		Object ret = attributes.get(key);
-		if(ret == null)
+		if (ret == null)
 			return defaultValue;
 		return ret;
 	}
-	
+
 	public TimeUnit getUnit() {
 		return unit;
 	}
@@ -213,16 +213,15 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 		this.watcher = watcher;
 	}
 
-	
 	@Override
 	public V call() throws Exception {
 		return null;
 	}
-	
+
 	/**
 	 * EntryPoint of a plugin.
 	 */
-	//@SuppressWarnings("unchecked")
+	// @SuppressWarnings("unchecked")
 	@SuppressWarnings("unchecked")
 	public void start() {
 		boolean execEnable = false;
@@ -241,11 +240,12 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 				@Override
 				public void run() {
 					pluginPool.schedule(put, 0, unit);
-				}}, 1, delay, unit);
+				}
+			}, 1, delay, unit);
 			Futures.addCallback(result, this);
 		}
-		
-		if(this.watcher != null) {
+
+		if (this.watcher != null) {
 			watcher.start();
 		}
 		this.setState(TestGridPlugin.STARTED);
@@ -272,7 +272,7 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 			}
 			pluginPool = null;
 		}
-		if(this.watcher != null) {
+		if (this.watcher != null) {
 			watcher.pause();
 		}
 		this.setState(TestGridPlugin.IDLE);
@@ -285,7 +285,7 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	 */
 	@Override
 	public void deactive() {
-		if(this.watcher != null) {
+		if (this.watcher != null) {
 			watcher.dispose();
 		}
 		if (pluginPool != null) {
@@ -361,7 +361,7 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	 */
 	@Override
 	public void init() {
-		if(this.watcher != null) {
+		if (this.watcher != null) {
 			watcher.start();
 		}
 	}
@@ -374,7 +374,7 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	@Override
 	public void dispose() {
 	}
-	
+
 	@Override
 	public void onSuccess(V result) {
 	}
@@ -382,9 +382,10 @@ public abstract class AbstractAgentPlugin<V> implements TestGridPlugin<V> {
 	@Override
 	public void onFailure(Throwable t) {
 	}
-	
+
 	/*
 	 * (non-Javadoc)
+	 * 
 	 * @see frank.incubator.testgrid.common.plugin.TestGridPlugin#doWatch()
 	 */
 	@Override

@@ -57,8 +57,7 @@ public class StatusChangeNotifier implements Observer {
 
 	private transient Map<String, Collection<Callable>> eventListeners = new HashMap<String, Collection<Callable>>();
 
-	private transient ListeningExecutorService pluginPool = MoreExecutors.listeningDecorator(Executors
-			.newCachedThreadPool());
+	private transient ListeningExecutorService pluginPool = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
 
 	public Map<String, Collection<Callable>> getEventListeners() {
 		return eventListeners;
@@ -93,107 +92,98 @@ public class StatusChangeNotifier implements Observer {
 					cName = "Device";
 				log.info("Incoming status change source is :" + cName + ", observable:" + obj + " ,argument :" + arg);
 				switch (cName) {
-				case "Device":
-					brokerName = mapping.get("Device")[0];
-					pipeName = mapping.get("Device")[1];
-					broker = hub.getBroker(brokerName);
-					if (broker == null) {
-						log.error("Mapping Broker not exist for Device Status Change Notifier.brokerName=" + broker);
+					case "Device":
+						brokerName = mapping.get("Device")[0];
+						pipeName = mapping.get("Device")[1];
+						broker = hub.getBroker(brokerName);
+						if (broker == null) {
+							log.error("Mapping Broker not exist for Device Status Change Notifier.brokerName=" + broker);
+							break;
+						}
+						pipe = broker.getPipe(pipeName);
+						if (pipe == null) {
+							log.error("Current Hub didn't including pipe[" + mapping.get("Device") + "]. Observable:" + obj + ", arg:" + arg);
+						} else {
+							msg = pipe.createMessage();
+							setProperty(msg, Constants.MSG_HEAD_DEVICE_EVENT, (Integer) arg);
+							setProperty(msg, Constants.MSG_HEAD_UPDATETIME, current);
+							setProperty(msg, Constants.MSG_HEAD_DEVICE_INFO, obj.toString());
+							pipe.send(msg);
+						}
 						break;
-					}
-					pipe = broker.getPipe(pipeName);
-					if (pipe == null) {
-						log.error("Current Hub didn't including pipe[" + mapping.get("Device") + "]. Observable:" + obj
-								+ ", arg:" + arg);
-					} else {
-						msg = pipe.createMessage();
-						setProperty(msg, Constants.MSG_HEAD_DEVICE_EVENT, (Integer) arg);
-						setProperty(msg, Constants.MSG_HEAD_UPDATETIME, current);
-						setProperty(msg, Constants.MSG_HEAD_DEVICE_INFO, obj.toString());
-						pipe.send(msg);
-					}
-					break;
-				case "Agent":
-					brokerName = mapping.get(cName)[0];
-					pipeName = mapping.get(cName)[1];
-					broker = hub.getBroker(brokerName);
-					if (broker == null) {
-						log.error("Mapping Broker not exist for " + cName + " Status Change Notifier.brokerName="
-								+ broker);
+					case "Agent":
+						brokerName = mapping.get(cName)[0];
+						pipeName = mapping.get(cName)[1];
+						broker = hub.getBroker(brokerName);
+						if (broker == null) {
+							log.error("Mapping Broker not exist for " + cName + " Status Change Notifier.brokerName=" + broker);
+							break;
+						}
+						pipe = broker.getPipe(pipeName);
+						if (pipe == null) {
+							log.error("Current Hub didn't including pipe[" + mapping.get("Agent") + "]. Observable:" + obj + ", arg:" + arg);
+						} else {
+							msg = pipe.createMessage();
+							setProperty(msg, Constants.MSG_HEAD_AGENTINFO, obj.toString());
+							pipe.send(msg);
+						}
 						break;
-					}
-					pipe = broker.getPipe(pipeName);
-					if (pipe == null) {
-						log.error("Current Hub didn't including pipe[" + mapping.get("Agent") + "]. Observable:" + obj
-								+ ", arg:" + arg);
-					} else {
-						msg = pipe.createMessage();
-						setProperty(msg, Constants.MSG_HEAD_AGENTINFO, obj.toString());
-						pipe.send(msg);
-					}
-					break;
-				case "Test":
-					brokerName = mapping.get(cName)[0];
-					pipeName = mapping.get(cName)[1];
-					broker = hub.getBroker(brokerName);
-					if (broker == null) {
-						log.error("Mapping Broker not exist for " + cName + " Status Change Notifier.brokerName="
-								+ broker);
+					case "Test":
+						brokerName = mapping.get(cName)[0];
+						pipeName = mapping.get(cName)[1];
+						broker = hub.getBroker(brokerName);
+						if (broker == null) {
+							log.error("Mapping Broker not exist for " + cName + " Status Change Notifier.brokerName=" + broker);
+							break;
+						}
+						pipe = broker.getPipe(pipeName);
+						if (pipe == null) {
+							log.error("Current Hub didn't including pipe[" + mapping.get("Test") + "]. Observable:" + obj + ", arg:" + arg);
+						} else {
+							long time = (Long) arg;
+							msg = pipe.createMessage();
+							setProperty(msg, Constants.MSG_HEAD_TEST_INFO, obj.toString());
+							setProperty(msg, Constants.MSG_HEAD_RESERVE_TIME, time);
+							setProperty(msg, Constants.MSG_HEAD_RUNNING_TIME, (current - time));
+							pipe.send(msg);
+						}
 						break;
-					}
-					pipe = broker.getPipe(pipeName);
-					if (pipe == null) {
-						log.error("Current Hub didn't including pipe[" + mapping.get("Test") + "]. Observable:" + obj
-								+ ", arg:" + arg);
-					} else {
-						long time = (Long) arg;
-						msg = pipe.createMessage();
-						setProperty(msg, Constants.MSG_HEAD_TEST_INFO, obj.toString());
-						setProperty(msg, Constants.MSG_HEAD_RESERVE_TIME, time);
-						setProperty(msg, Constants.MSG_HEAD_RUNNING_TIME, (current - time));
-						pipe.send(msg);
-					}
-					break;
-				case "Task":
-					brokerName = mapping.get(cName)[0];
-					pipeName = mapping.get(cName)[1];
-					broker = hub.getBroker(brokerName);
-					if (broker == null) {
-						log.error("Mapping Broker not exist for " + cName + " Status Change Notifier.brokerName="
-								+ broker);
+					case "Task":
+						brokerName = mapping.get(cName)[0];
+						pipeName = mapping.get(cName)[1];
+						broker = hub.getBroker(brokerName);
+						if (broker == null) {
+							log.error("Mapping Broker not exist for " + cName + " Status Change Notifier.brokerName=" + broker);
+							break;
+						}
+						pipe = broker.getPipe(pipeName);
+						if (pipe == null) {
+							log.error("Current Hub didn't including pipe[" + mapping.get("Task") + "]. Observable:" + obj + ", arg:" + arg);
+						} else {
+							msg = pipe.createMessage();
+							setProperty(msg, Constants.MSG_HEAD_TASKSTATE, obj.toString());
+							pipe.send(msg);
+						}
 						break;
-					}
-					pipe = broker.getPipe(pipeName);
-					if (pipe == null) {
-						log.error("Current Hub didn't including pipe[" + mapping.get("Task") + "]. Observable:" + obj
-								+ ", arg:" + arg);
-					} else {
-						msg = pipe.createMessage();
-						setProperty(msg, Constants.MSG_HEAD_TASKSTATE, obj.toString());
-						pipe.send(msg);
-					}
-					break;
-				case "Client":
-					brokerName = mapping.get(cName)[0];
-					pipeName = mapping.get(cName)[1];
-					broker = hub.getBroker(brokerName);
-					if (broker == null) {
-						log.error("Mapping Broker not exist for " + cName + " Status Change Notifier.brokerName="
-								+ broker);
+					case "Client":
+						brokerName = mapping.get(cName)[0];
+						pipeName = mapping.get(cName)[1];
+						broker = hub.getBroker(brokerName);
+						if (broker == null) {
+							log.error("Mapping Broker not exist for " + cName + " Status Change Notifier.brokerName=" + broker);
+							break;
+						}
+						pipe = broker.getPipe(pipeName);
+						if (pipe == null) {
+							log.error("Current Hub didn't including pipe[" + mapping.get("Client") + "]. Observable:" + obj + ", arg:" + arg);
+						} else {
+							msg = pipe.createMessage();
+							setProperty(msg, Constants.MSG_HEAD_CLIENTINFO, obj.toString());
+							pipe.send(msg);
+						}
 						break;
-					}
-					pipe = broker.getPipe(pipeName);
-					if (pipe == null) {
-						log.error("Current Hub didn't including pipe[" + mapping.get("Client") + "]. Observable:" + obj
-								+ ", arg:" + arg);
-					} else {
-						msg = pipe.createMessage();
-						setProperty(msg, Constants.MSG_HEAD_CLIENTINFO, obj.toString());
-						pipe.send(msg);
-					}
-					break;
-				default:
-					log.warn("Didn't support this type of object status change:" + obj.getClass().getCanonicalName());
+					default:
+						log.warn("Didn't support this type of object status change:" + obj.getClass().getCanonicalName());
 				}
 
 				if (eventListeners.get(cName) != null) {
@@ -218,4 +208,8 @@ public class StatusChangeNotifier implements Observer {
 		}
 	}
 
+	public void dispose() {
+		this.eventListeners.clear();
+		this.pluginPool.shutdown();
+	}
 }

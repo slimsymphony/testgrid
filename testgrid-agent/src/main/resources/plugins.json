@@ -41,5 +41,12 @@
 		'permissions':['ALLOCATE_DEVICE_INFO','FS_WATCH'],
 		'scheduleSecs': 120,
 		'attributes':{'path':'install/tasks'}
+	},
+	{
+		'className':'frank.incubator.testgrid.agent.plugin.VncAutoReleasePlugin',
+		'pluginName':'VncAutoReleasePlugin',
+		'permissions':['ALLOCATE_DEVICE_INFO','EXECUTE_SCHEDULED_OPERATION'],
+		'scheduleSecs': 30,
+		'attributes':{}
 	}
 ]

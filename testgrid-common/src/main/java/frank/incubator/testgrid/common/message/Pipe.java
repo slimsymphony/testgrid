@@ -196,8 +196,7 @@ public class Pipe {
 					setProperty(msg, key, properties.get(key));
 			send(msg);
 		} catch (Exception ex) {
-			throw new MessageException("Send message fail,content=" + content + ",properties="
-					+ CommonUtils.toJson(properties), ex);
+			throw new MessageException("Send message fail,content=" + content + ",properties=" + CommonUtils.toJson(properties), ex);
 		}
 	}
 }

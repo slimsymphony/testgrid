@@ -16,7 +16,7 @@ import frank.incubator.testgrid.common.model.Device;
 
 public class WlanMonitorPlugin extends AbstractAgentPlugin<Collection<Device>> {
 	private final Logger log = LogUtils.getLogger("WlanMonitorPlugin");
-	public static String NOTIFICATION_URL = "http://atc.alipay.net/sendnotification.json";//"http://ali-80938n.hz.ali.com/sendnotification.json";// 
+	public static String NOTIFICATION_URL = "http://atc.alipay.net/sendnotification.json";// "http://ali-80938n.hz.ali.com/sendnotification.json";//
 	public static String NOTIFY_USERS = "peiyang.wy";
 	private Map<Device, Long> suspectList = new ConcurrentHashMap<Device, Long>();
 	private Map<Device, Long> issueDeviceList = new ConcurrentHashMap<Device, Long>();
@@ -74,19 +74,19 @@ public class WlanMonitorPlugin extends AbstractAgentPlugin<Collection<Device>> {
 				case Device.DEVICE_RESERVED:
 					String val = device.getAttribute(Constants.DEVICE_IP_WLAN);
 					if (val == null) {
-						if(!issueStatistic.containsKey(device)) {
-							issueStatistic.put(device,0L);
+						if (!issueStatistic.containsKey(device)) {
+							issueStatistic.put(device, 0L);
 						}
-						issueStatistic.put(device, issueStatistic.get(device)+1);
+						issueStatistic.put(device, issueStatistic.get(device) + 1);
 						if (!issueDeviceList.containsKey(device)) {
-							if(suspectList.containsKey(device)) {
+							if (suspectList.containsKey(device)) {
 								issueDeviceList.put(device, current);
 								suspectList.remove(device);
 								sendNotification(device, current, true);
 								if (switchToMaintain) {
 									dm.setDeviceState(device.getId(), Device.DEVICE_MAINTAIN);
 								}
-							}else{
+							} else {
 								suspectList.put(device, current);
 							}
 						}
@@ -128,26 +128,26 @@ public class WlanMonitorPlugin extends AbstractAgentPlugin<Collection<Device>> {
 								}
 								issueDeviceList.remove(device);
 								sendNotification(device, current, false);
-							}else if(suspectList.containsKey(device)) {
+							} else if (suspectList.containsKey(device)) {
 								suspectList.remove(device);
 							}
 						} else {
-							if(!issueStatistic.containsKey(device)) {
-								issueStatistic.put(device,0L);
+							if (!issueStatistic.containsKey(device)) {
+								issueStatistic.put(device, 0L);
 							}
-							issueStatistic.put(device, issueStatistic.get(device)+1);
+							issueStatistic.put(device, issueStatistic.get(device) + 1);
 							if (!issueDeviceList.containsKey(device)) {
-								if(suspectList.containsKey(device)) {
+								if (suspectList.containsKey(device)) {
 									if (switchToMaintain) {
 										dm.setDeviceState(device.getId(), Device.DEVICE_MAINTAIN);
 									}
 									issueDeviceList.put(device, current);
 									suspectList.remove(device);
 									sendNotification(device, current, true);
-								}else {
+								} else {
 									suspectList.put(device, current);
 								}
-								
+
 							}
 						}
 					}

@@ -33,6 +33,7 @@ import frank.incubator.testgrid.common.plugin.TestGridPlugin;
 public final class PluginManager {
 
 	final static Logger log = LogUtils.getLogger("PluginManager");
+
 	/**
 	 * Descriptor of a special testGrid Plugin.
 	 * 
@@ -149,37 +150,35 @@ public final class PluginManager {
 	 */
 	public static Map<String, PluginDescriptor> scanPlugins() {
 		Map<String, PluginDescriptor> pds = new HashMap<String, PluginDescriptor>();
-		String internalPluginStr = CommonUtils.loadResourcesAsString(Constants.PLUGIN_CONFIG_FILE,
-				CommonUtils.RESOURCE_LOAD_MODE_ONLY_EMBEDED, false);
+		String internalPluginStr = CommonUtils.loadResourcesAsString(Constants.PLUGIN_CONFIG_FILE, CommonUtils.RESOURCE_LOAD_MODE_ONLY_EMBEDED, false);
 		try {
 			if (internalPluginStr != null && !internalPluginStr.trim().isEmpty()) {
 				PluginDescriptor[] ps = CommonUtils.fromJson(internalPluginStr, new TypeToken<PluginDescriptor[]>() {
 				}.getType());
-				if(ps != null) {
+				if (ps != null) {
 					for (PluginDescriptor pd : ps) {
 						if (!pds.containsKey(pd.getPluginName()))
 							pds.put(pd.getPluginName(), pd);
 					}
 				}
 			}
-		}catch(Exception ex) {
-			log.error("PluginManager scan internal Plugin met exception:"+internalPluginStr, ex);
+		} catch (Exception ex) {
+			log.error("PluginManager scan internal Plugin met exception:" + internalPluginStr, ex);
 		}
-		String externalPluginStr = CommonUtils.loadResourcesAsString(Constants.PLUGIN_CONFIG_FILE,
-				CommonUtils.RESOURCE_LOAD_MODE_ONLY_EXTERNAL, false);
+		String externalPluginStr = CommonUtils.loadResourcesAsString(Constants.PLUGIN_CONFIG_FILE, CommonUtils.RESOURCE_LOAD_MODE_ONLY_EXTERNAL, false);
 		try {
 			if (externalPluginStr != null && !externalPluginStr.trim().isEmpty()) {
 				PluginDescriptor[] ps = CommonUtils.fromJson(externalPluginStr, new TypeToken<PluginPermission[]>() {
 				}.getType());
-				if(ps != null) {
+				if (ps != null) {
 					for (PluginDescriptor pd : ps) {
 						if (!pds.containsKey(pd.getPluginName()))
 							pds.put(pd.getPluginName(), pd);
 					}
 				}
 			}
-		}catch(Exception ex) {
-			log.error("PluginManager scan external Plugin met exception:"+externalPluginStr, ex);
+		} catch (Exception ex) {
+			log.error("PluginManager scan external Plugin met exception:" + externalPluginStr, ex);
 		}
 		return pds;
 	}
@@ -248,16 +247,17 @@ public final class PluginManager {
 					break;
 				case FS_WATCH:
 					plugin.setWorkspace(agent.getWorkspace());
-					if(plugin.getAttribute("path") != null) {
-						File f = new File(agent.getWorkspace(), (String)plugin.getAttribute("path"));
-						if(!f.exists())
+					if (plugin.getAttribute("path") != null) {
+						File f = new File(agent.getWorkspace(), (String) plugin.getAttribute("path"));
+						if (!f.exists())
 							f.mkdirs();
 						final Path path = f.toPath();
 						plugin.setWatcher(new FileWatchService(path, false) {
 							@Override
 							public void handleEvent(WatchEvent<Path> event, Path path) {
 								plugin.doWatch(event, path);
-							}});
+							}
+						});
 					}
 					break;
 				default:

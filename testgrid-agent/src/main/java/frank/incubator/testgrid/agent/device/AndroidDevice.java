@@ -12,31 +12,21 @@ public class AndroidDevice extends Device {
 
 	public AndroidDevice(String id) {
 		super(id);
-		status = new AndroidDeviceStatus(id);
+		setStatus(new AndroidDeviceStatus(id));
 		this.addAttribute(Constants.DEVICE_PLATFORM, Constants.PLATFORM_ANDROID);
 	}
 
 	public AndroidDevice() {
 		super();
-		status = new AndroidDeviceStatus(id);
+		setStatus(new AndroidDeviceStatus(id));
 		this.addAttribute(Constants.DEVICE_PLATFORM, Constants.PLATFORM_ANDROID);
-	}
-
-	private AndroidDeviceStatus status;
-
-	public AndroidDeviceStatus getStatus() {
-		return status;
-	}
-
-	public void setStatus(AndroidDeviceStatus status) {
-		this.status = status;
 	}
 
 	@Override
 	public void setAttributes(Map<String, Object> attributes) {
 		super.setAttributes(attributes);
 		if (attributes.containsKey(Constants.DEVICE_SN)) {
-			this.status.setId(this.id);
+			this.getStatus().setId(this.id);
 		}
 	}
 
@@ -44,14 +34,14 @@ public class AndroidDevice extends Device {
 	public <T extends Object> void addAttribute(String key, T value) {
 		super.addAttribute(key, value);
 		if (Constants.DEVICE_SN.equals(key)) {
-			this.status.setId(this.id);
+			this.getStatus().setId(this.id);
 		}
 	}
 
 	@Override
 	public void setId(String id) {
 		super.setId(id);
-		this.status.setId(id);
+		this.getStatus().setId(id);
 	}
 
 	@Override
@@ -75,19 +65,19 @@ public class AndroidDevice extends Device {
 		else
 			return "$ADB_HOME/adb";
 	}
-	
+
 	@Override
 	public boolean isConnected() {
 		StringBuilder sb = new StringBuilder(50);
 		sb.append(adb()).append(" -s ").append(this.getAttribute(Constants.DEVICE_SN)).append(" shell pwd");
 		try {
 			String output = CommonUtils.exec(sb.toString(), null);
-			if(output.toLowerCase().contains("error") || output.toLowerCase().contains("device not found") ) {
+			if (output.toLowerCase().contains("error") || output.toLowerCase().contains("device not found")) {
 				return false;
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-		} 
+		}
 		return true;
 	}
 }

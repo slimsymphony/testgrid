@@ -16,7 +16,7 @@ import frank.incubator.testgrid.common.CommonUtils;
  *
  */
 public class DeviceRequirement {
-	private Device main = Device.createRequirement(new HashMap<String,Object>());
+	private Device main = Device.createRequirement(new HashMap<String, Object>());
 	private Device ref = null;
 
 	public Device getMain() {
@@ -38,41 +38,41 @@ public class DeviceRequirement {
 	public String toString() {
 		return CommonUtils.toJson(this);
 	}
-	
+
 	@Override
 	public boolean equals(Object obj) {
-		if(obj == null || !(obj instanceof DeviceRequirement))
+		if (obj == null || !(obj instanceof DeviceRequirement))
 			return false;
 		DeviceRequirement dr = (DeviceRequirement) obj;
 		Device drM = dr.getMain();
 		Device drR = dr.getRef();
-		if(main != null) {
-			if(drM == null)
+		if (main != null) {
+			if (drM == null)
 				return false;
-			if(main.getAttributes().size() != drM.getAttributes().size())
+			if (main.getAttributes().size() != drM.getAttributes().size())
 				return false;
-			for(String key : main.getAttributes().keySet())
-				if(!main.getAttribute(key).equals(drM.getAttribute(key)))
+			for (String key : main.getAttributes().keySet())
+				if (!main.getAttribute(key).equals(drM.getAttribute(key)))
 					return false;
-			if(main.getCompareAtts().size() != drM.getCompareAtts().size())
+			if (main.getCompareAtts().size() != drM.getCompareAtts().size())
 				return false;
-			for(String att : main.getCompareAtts()) {
-				if(!drM.getCompareAtts().contains(att))
+			for (String att : main.getCompareAtts()) {
+				if (!drM.getCompareAtts().contains(att))
 					return false;
 			}
 		}
-		if(ref != null) {
-			if(drR == null)
+		if (ref != null) {
+			if (drR == null)
 				return false;
-			if(ref.getAttributes().size() != drR.getAttributes().size())
+			if (ref.getAttributes().size() != drR.getAttributes().size())
 				return false;
-			for(String key : ref.getAttributes().keySet())
-				if(!ref.getAttribute(key).equals(drR.getAttribute(key)))
+			for (String key : ref.getAttributes().keySet())
+				if (!ref.getAttribute(key).equals(drR.getAttribute(key)))
 					return false;
-			if(ref.getCompareAtts().size() != drR.getCompareAtts().size())
+			if (ref.getCompareAtts().size() != drR.getCompareAtts().size())
 				return false;
-			for(String att : ref.getCompareAtts()) {
-				if(!drR.getCompareAtts().contains(att))
+			for (String att : ref.getCompareAtts()) {
+				if (!drR.getCompareAtts().contains(att))
 					return false;
 			}
 		}

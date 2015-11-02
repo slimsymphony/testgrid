@@ -78,15 +78,13 @@ public class HttpPutFTChannel extends FileTransferChannel {
 			if (statusCode == HttpStatus.SC_OK)
 				result = true;
 			else {
-				if(log != null)
-					log.error("Apply Pushing files to " + getProperty("postUrl", "")
-						+ " failed. Post return code:" + statusCode);
+				if (log != null)
+					log.error("Apply Pushing files to " + getProperty("postUrl", "") + " failed. Post return code:" + statusCode);
 				else
-					System.err.println("Apply Pushing files to " + getProperty("postUrl", "")
-						+ " failed. Post return code:" + statusCode);
+					System.err.println("Apply Pushing files to " + getProperty("postUrl", "") + " failed. Post return code:" + statusCode);
 			}
 		} catch (Exception ex) {
-			if(log != null)
+			if (log != null)
 				log.error("Apply HttpPutChannel failed.", ex);
 		} finally {
 			CommonUtils.closeQuietly(response);
@@ -108,8 +106,7 @@ public class HttpPutFTChannel extends FileTransferChannel {
 	@Override
 	public boolean send(String token, Collection<File> fileList, LogConnector log) {
 		log.info("HttpPutChannel begin sending files. token=" + token);
-		HttpFileTransferSource source = new HttpFileTransferSource(FileTransferMode.TARGET_HOST, getProperty("postUrl",
-				""), log.getOs());
+		HttpFileTransferSource source = new HttpFileTransferSource(FileTransferMode.TARGET_HOST, getProperty("postUrl", ""), log.getOs());
 		try {
 			source.push(token, fileList);
 		} catch (Exception e) {
@@ -130,8 +127,8 @@ public class HttpPutFTChannel extends FileTransferChannel {
 	@Override
 	public boolean receive(String token, Map<String, Long> fileList, File localDestDir, LogConnector log) {
 		log.info("HttpPutChannel begin receiving files. token=" + token);
-		HttpFileTransferTarget target = new HttpFileTransferTarget(FileTransferMode.TARGET_HOST, getProperty("postUrl",
-				""), getProperty("repoPath", File.class), log.getOs());
+		HttpFileTransferTarget target = new HttpFileTransferTarget(FileTransferMode.TARGET_HOST, getProperty("postUrl", ""),
+				getProperty("repoPath", File.class), log.getOs());
 		try {
 			target.accept(token, fileList, localDestDir);
 		} catch (Exception e) {

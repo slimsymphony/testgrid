@@ -65,19 +65,19 @@ public final class DirectSocketTransferTarget extends Thread implements FileTran
 	public void run() {
 		try {
 			switch (mode) {
-			case TARGET_HOST:
-				server = new ServerSocket(port);
-				log.info("Start waiting for incoming request to push files.");
-				while (running) {
-					Socket socket = server.accept();
-					log.info("Incoming request from:" + socket.getRemoteSocketAddress());
-					handle(socket);
-				}
-				break;
-			case SOURCE_HOST:
-				// do nothing.
-			default:
-				break;
+				case TARGET_HOST:
+					server = new ServerSocket(port);
+					log.info("Start waiting for incoming request to push files.");
+					while (running) {
+						Socket socket = server.accept();
+						log.info("Incoming request from:" + socket.getRemoteSocketAddress());
+						handle(socket);
+					}
+					break;
+				case SOURCE_HOST:
+					// do nothing.
+				default:
+					break;
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -142,8 +142,7 @@ public final class DirectSocketTransferTarget extends Thread implements FileTran
 								CommonUtils.closeQuietly(fos);
 							}
 						} else {
-							log.error("Invalid incoming file received. Won't receive the file out of receiving list: "
-									+ request);
+							log.error("Invalid incoming file received. Won't receive the file out of receiving list: " + request);
 						}
 						log.info("Finished receiving file:" + request);
 						os.writeInt(Constants.RECEIVE_FINISHED);
@@ -200,7 +199,7 @@ public final class DirectSocketTransferTarget extends Thread implements FileTran
 			os = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
 			in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
 			os.writeUTF(token);
-			//os.writeChars(token);
+			// os.writeChars(token);
 			os.flush();
 			int response = in.readInt();
 			if (response == Constants.VALIDATION_SUCC) {
@@ -209,7 +208,7 @@ public final class DirectSocketTransferTarget extends Thread implements FileTran
 					try {
 						os.writeUTF(f);
 						os.flush();
-						log.info("[{}]Target: requesting:{}", token,f);
+						log.info("[{}]Target: requesting:{}", token, f);
 						File file = new File(localDestDir, f);
 						fos = new BufferedOutputStream(new FileOutputStream(file));
 						try {
@@ -238,7 +237,8 @@ public final class DirectSocketTransferTarget extends Thread implements FileTran
 				os.writeUTF(Constants.TRANSFER_ENDED);
 				os.flush();
 			} else {
-				throw new Exception("Invalid token for fetching files from " + host + ":" + port + ", token:" + token+". VALIDATION_RESPONSE Code:" + response);
+				throw new Exception("Invalid token for fetching files from " + host + ":" + port + ", token:" + token + ". VALIDATION_RESPONSE Code:"
+						+ response);
 			}
 		} finally {
 			CommonUtils.closeQuietly(os);

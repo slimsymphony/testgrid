@@ -98,8 +98,7 @@ public class BufferedMessageOutputStream extends OutputStream {
 		this(s, p, MSG_LENGTH, delayBeforeStart, interval, log);
 	}
 
-	public BufferedMessageOutputStream(Session s, MessageProducer p, int bufferSize, int delayBeforeStart,
-			int interval, Logger log) {
+	public BufferedMessageOutputStream(Session s, MessageProducer p, int bufferSize, int delayBeforeStart, int interval, Logger log) {
 		session = s;
 		producer = p;
 		MSG_LENGTH = bufferSize;

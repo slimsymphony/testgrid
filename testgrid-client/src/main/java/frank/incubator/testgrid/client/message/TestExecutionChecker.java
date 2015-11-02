@@ -32,8 +32,7 @@ public class TestExecutionChecker extends MessageListenerAdapter implements Runn
 		super("TestExecutionChecker", tracker);
 		this.client = client;
 		this.stopAbnromalTest = stopAbnromalTest;
-		log.info("TestExecutionChecker start to work for Task[" + client.getTask().getId()
-				+ "]! HeartbeatCheck status:" + stopAbnromalTest);
+		log.info("TestExecutionChecker start to work for Task[" + client.getTask().getId() + "]! HeartbeatCheck status:" + stopAbnromalTest);
 	}
 
 	private TaskClient client;
@@ -50,21 +49,19 @@ public class TestExecutionChecker extends MessageListenerAdapter implements Runn
 		log.info("TestExecutionChecker received a response.");
 		try {
 			String testId = getProperty(message, Constants.MSG_HEAD_TESTID, "");
+			String taskId = getProperty(message, Constants.MSG_HEAD_TASKID, "");
 			long timestamp = message.getJMSTimestamp();
 			testIdx.put(testId, timestamp);
 			boolean isRunning = getProperty(message, Constants.MSG_HEAD_RESPONSE, true);
 			String status = getProperty(message, Constants.MSG_HEAD_RESPONSE_DETAIL, "");
 			String from = getProperty(message, Constants.MSG_HEAD_FROM, "Unknown");
-			log.info("Get a response from " + from + " at " + CommonUtils.parseTimestamp(timestamp)
-					+ " give response that the test[" + testId + "]'s validation state is " + isRunning
-					+ ", and status is:" + status);
+			log.info("Get a response from " + from + " at " + CommonUtils.parseTimestamp(timestamp) + " give response that the test[" + taskId + Constants.TASK_TEST_SPLITER + testId
+					+ "]'s validation state is " + isRunning + ", and status is:" + status);
 			if (!isRunning) {
 				if (stopAbnromalTest)
-					client.testFail(testId, "Agent[" + from
-							+ "] side can't find alive test executor exists for this test[" + testId + "]");
+					client.testFail(testId, "Agent[" + from + "] side can't find alive test executor exists for this test[" + taskId + Constants.TASK_TEST_SPLITER + testId + "]");
 				else
-					log.warn("Agent[" + from + "] side can't find alive test executor exists for this test[" + testId
-							+ "]");
+					log.warn("Agent[" + from + "] side can't find alive test executor exists for this test[" + taskId + Constants.TASK_TEST_SPLITER + testId + "]");
 			}
 		} catch (Exception e) {
 			log.error("TestExecution check failed. original message is :" + message);
@@ -109,13 +106,11 @@ public class TestExecutionChecker extends MessageListenerAdapter implements Runn
 								if ((current - lastTime) > timeout) {
 									if (stopAbnromalTest)
 										client.testFail(t.getId(),
-												"The Test[" + t.getId() + "] didn't get heartbeat feedback over "
-														+ CommonUtils.convert(timeout) + " for test[" + t.getId()
-														+ "], failed suspected, going to stop it.");
+												"The Test[" + t.getId() + "] didn't get heartbeat feedback over " + CommonUtils.convert(timeout) + " for test["
+														+ t.getId() + "], failed suspected, going to stop it.");
 									else
-										log.warn("The Test[" + t.getId() + "] didn't get heartbeat feedback over "
-												+ CommonUtils.convert(timeout) + " for test[" + t.getId()
-												+ "], failed suspected, going to stop it.");
+										log.warn("The Test[" + t.getId() + "] didn't get heartbeat feedback over " + CommonUtils.convert(timeout)
+												+ " for test[" + t.getId() + "], failed suspected, going to stop it.");
 									continue;
 								}
 							}

@@ -1,6 +1,7 @@
 package frank.incubator.testgrid.common.model;
 
 import frank.incubator.testgrid.common.CommonUtils;
+import frank.incubator.testgrid.common.Constants;
 
 public class Task extends BaseObject {
 
@@ -11,6 +12,7 @@ public class Task extends BaseObject {
 	private long startTime = 0L;
 	private long endTime = 0L;
 	private boolean sendOutput = false;
+	private long timeout = Constants.ONE_MINUTE * 10;
 
 	public Task() {
 		created = System.currentTimeMillis();
@@ -56,8 +58,8 @@ public class Task extends BaseObject {
 
 	public void setSendOutput(boolean sendOutput) {
 		this.sendOutput = sendOutput;
-		if(this.getTestsuite() != null && this.getTestsuite().getTests() != null) {
-			for(Test t : this.getTestsuite().getTests()) {
+		if (this.getTestsuite() != null && this.getTestsuite().getTests() != null) {
+			for (Test t : this.getTestsuite().getTests()) {
 				t.setSendOutput(sendOutput);
 			}
 		}
@@ -106,6 +108,18 @@ public class Task extends BaseObject {
 
 	public void setStartTime(long startTime) {
 		this.startTime = startTime;
+	}
+
+	public long getTimeout() {
+		return timeout;
+	}
+
+	public void setTimeout(long timeout) {
+		this.timeout = timeout;
+	}
+
+	public void setCreated(long created) {
+		this.created = created;
 	}
 
 }

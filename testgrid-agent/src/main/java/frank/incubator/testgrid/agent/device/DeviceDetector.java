@@ -40,6 +40,14 @@ public abstract class DeviceDetector extends Thread {
 		}
 	}
 
+	public long getWaitingSchedule() {
+		return waitingSchedule;
+	}
+
+	public void setWaitingSchedule(long waitingSchedule) {
+		this.waitingSchedule = waitingSchedule;
+	}
+
 	protected void loadUserDefined(Device device) {
 		BufferedReader reader = null;
 		File file = new File(workspace, (String) device.getAttribute(Constants.DEVICE_SN) + ".properties");
@@ -77,8 +85,7 @@ public abstract class DeviceDetector extends Thread {
 		} catch (FileNotFoundException e) {
 			log.error("Didn't find the device file:" + file.getAbsolutePath(), e);
 		} catch (Exception ex) {
-			log.error("load and combine user-defined attribute for device[" + device + "] failed. persistence file:"
-					+ file.getAbsolutePath(), ex);
+			log.error("load and combine user-defined attribute for device[" + device + "] failed. persistence file:" + file.getAbsolutePath(), ex);
 		} finally {
 			CommonUtils.closeQuietly(reader);
 		}

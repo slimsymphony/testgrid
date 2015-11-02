@@ -39,34 +39,34 @@ public class LogConnector {
 		private int getValue() {
 			int ret = 0;
 			switch (this) {
-			case DEBUG:
-				ret = 0;
-				break;
-			case INFO:
-				ret = 1;
-				break;
-			case WARN:
-				ret = 2;
-				break;
-			case ERROR:
-				ret = 3;
-				break;
+				case DEBUG:
+					ret = 0;
+					break;
+				case INFO:
+					ret = 1;
+					break;
+				case WARN:
+					ret = 2;
+					break;
+				case ERROR:
+					ret = 3;
+					break;
 			}
 			return ret;
 		}
 
 		public Level convert() {
 			switch (this) {
-			case DEBUG:
-				return Level.DEBUG;
-			case INFO:
-				return Level.INFO;
-			case WARN:
-				return Level.WARN;
-			case ERROR:
-				return Level.ERROR;
-			default:
-				return Level.INFO;
+				case DEBUG:
+					return Level.DEBUG;
+				case INFO:
+					return Level.INFO;
+				case WARN:
+					return Level.WARN;
+				case ERROR:
+					return Level.ERROR;
+				default:
+					return Level.INFO;
 			}
 		}
 
@@ -168,10 +168,10 @@ public class LogConnector {
 	}
 
 	public void debug(String msg) {
-		debug(msg,(Object)null);
+		debug(msg, (Object) null);
 	}
 
-	public void debug(String msg, Object ... objs) {
+	public void debug(String msg, Object... objs) {
 		if (level.getValue() <= 1)
 			output("Debug", msg, null, objs);
 		StringBuilder sb = new StringBuilder();
@@ -180,17 +180,17 @@ public class LogConnector {
 				if (tag != null && !tag.trim().isEmpty())
 					sb.append("<").append(tag).append(">");
 		sb.append(msg);
-		if(objs != null && objs.length > 0)
+		if (objs != null && objs.length > 0)
 			log.debug(sb.toString(), objs);
-		else	
+		else
 			log.debug(sb.toString());
 	}
-	
+
 	public void info(String msg) {
-		info(msg, (Object)null);
+		info(msg, (Object) null);
 	}
-	
-	public void info(String msg, Object ... objs) {
+
+	public void info(String msg, Object... objs) {
 		if (level.getValue() <= 1)
 			output("Info", msg, null, objs);
 		StringBuilder sb = new StringBuilder();
@@ -199,16 +199,17 @@ public class LogConnector {
 				if (tag != null && !tag.trim().isEmpty())
 					sb.append("<").append(tag).append(">");
 		sb.append(msg);
-		if(objs != null && objs.length > 0)
+		if (objs != null && objs.length > 0)
 			log.info(sb.toString(), objs);
 		else
 			log.info(sb.toString());
 	}
 
 	public void warn(String msg) {
-		warn(msg, (Object)null);
+		warn(msg, (Object) null);
 	}
-	public void warn(String msg, Object ... objects) {
+
+	public void warn(String msg, Object... objects) {
 		if (level.getValue() <= 2)
 			output("Warn", msg, null, objects);
 		StringBuilder sb = new StringBuilder();
@@ -217,21 +218,21 @@ public class LogConnector {
 				if (tag != null && !tag.trim().isEmpty())
 					sb.append("<").append(tag).append(">");
 		sb.append(msg);
-		if(objects != null && objects.length > 0)
+		if (objects != null && objects.length > 0)
 			log.warn(sb.toString(), objects);
 		else
 			log.warn(sb.toString());
 	}
 
-	public void error(String msg) {
-		error(msg, null);
-	}
-	
 	public void error(String msg, Throwable t) {
-		error(msg, t, (Object)null);
+		error(msg, t, (Object) null);
 	}
-	
-	public void error(String msg, Throwable t, Object ... objects) {
+
+	public void error(String msg, Object... objects) {
+		error(msg, null, objects);
+	}
+
+	public void error(String msg, Throwable t, Object... objects) {
 		if (level.getValue() <= 3)
 			output("Error", msg, t, objects);
 		StringBuilder sb = new StringBuilder();
@@ -240,23 +241,26 @@ public class LogConnector {
 				if (tag != null && !tag.trim().isEmpty())
 					sb.append("<").append(tag).append(">");
 		sb.append(msg);
-		
-		log.error(sb.toString()+ CommonUtils.toJson(objects) , t);
+		if (objects != null && objects.length > 0) {
+			log.error(msg, objects);
+			log.error("", t);
+		} else {
+			log.error(sb.toString(), t);
+		}
 	}
 
-	private void output(String level, String msg, Throwable t, Object ... objects) {
+	private void output(String level, String msg, Throwable t, Object... objects) {
 		try {
 			if (os != null) {
 				StringBuilder sb = new StringBuilder();
-				sb.append(CommonUtils.getTime()).append("[").append(log.getName()).append("] [").append(level)
-						.append("]");
+				sb.append(CommonUtils.getTime()).append("[").append(log.getName()).append("] [").append(level).append("]");
 				if (tags != null && !tags.isEmpty())
 					for (String tag : tags)
 						if (tag != null && !tag.trim().isEmpty())
 							sb.append("<").append(tag).append(">");
 				sb.append(msg);
-				if(objects != null && objects.length>0) {
-					for(Object obj : objects) {
+				if (objects != null && objects.length > 0) {
+					for (Object obj : objects) {
 						sb.append(" ").append(obj).append(" ");
 					}
 				}

@@ -13,16 +13,16 @@ import frank.incubator.testgrid.common.model.Test;
 public class FakeTestListener extends TestListener {
 
 	private boolean serializeWaiting = false;
-	
+
 	public FakeTestListener(Test test) {
-		super(test, null, null);
+		super(test, null, null, false);
 	}
-	
+
 	public FakeTestListener(Test test, boolean serializeWaiting) {
-		super(test, null, null);
+		super(test, null, null, false);
 		this.serializeWaiting = serializeWaiting;
 	}
-	
+
 	public boolean isSerializeWaiting() {
 		return this.serializeWaiting;
 	}
@@ -30,7 +30,7 @@ public class FakeTestListener extends TestListener {
 	public void setSerializeWaiting(boolean sw) {
 		this.serializeWaiting = sw;
 	}
-	
+
 	@Override
 	public void handle(Message message) {
 

@@ -28,6 +28,8 @@ public class Device extends BaseObject {
 	public static final int ROLE_MAIN = 0;
 	public static final int ROLE_REF = 1;
 
+	private DeviceStatus status;
+
 	public Device(String id) {
 		this.id = id;
 		this.compareAtts.add(Constants.DEVICE_ID);
@@ -39,34 +41,42 @@ public class Device extends BaseObject {
 		this("Device_" + CommonUtils.getHostName() + "_" + CommonUtils.generateToken(5));
 	}
 
+	public DeviceStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(DeviceStatus status) {
+		this.status = status;
+	}
+
 	public String getStateString() {
 		String stateString = "";
 
 		switch (state) {
-		case DEVICE_FREE:
-			stateString = "FREE";
-			break;
-		case DEVICE_BUSY:
-			stateString = "BUSY";
-			break;
-		case DEVICE_RESERVED:
-			stateString = "RESERVED";
-			break;
-		case DEVICE_LOST_TEMP:
-			stateString = "LOST_TEMP";
-			break;
-		case DEVICE_LOST:
-			stateString = "LOST";
-			break;
-		case DEVICE_MAINTAIN:
-			stateString = "MAINTAIN";
-			break;
-		case DEVICE_NEW:
-			stateString = "NEW";
-			break;
-		case DEVICE_UPDATE:
-			stateString = "UPDATE";
-			break;
+			case DEVICE_FREE:
+				stateString = "FREE";
+				break;
+			case DEVICE_BUSY:
+				stateString = "BUSY";
+				break;
+			case DEVICE_RESERVED:
+				stateString = "RESERVED";
+				break;
+			case DEVICE_LOST_TEMP:
+				stateString = "LOST_TEMP";
+				break;
+			case DEVICE_LOST:
+				stateString = "LOST";
+				break;
+			case DEVICE_MAINTAIN:
+				stateString = "MAINTAIN";
+				break;
+			case DEVICE_NEW:
+				stateString = "NEW";
+				break;
+			case DEVICE_UPDATE:
+				stateString = "UPDATE";
+				break;
 		}
 
 		return stateString;
@@ -84,7 +94,7 @@ public class Device extends BaseObject {
 	public static Device createRequirement(Map<String, Object> att) {
 		Device d = new Device();
 		d.compareAtts.clear();
-		if(att != null) {
+		if (att != null) {
 			for (String name : att.keySet())
 				d.getCompareAtts().add(name);
 			d.setAttributes(att);
@@ -140,7 +150,7 @@ public class Device extends BaseObject {
 
 	public void setAttributes(Map<String, Object> attributes) {
 		this.attributes = attributes;
-		if (attributes.containsKey(Constants.DEVICE_SN)) {
+		if (attributes.containsKey(Constants.DEVICE_SN) && attributes.get(Constants.DEVICE_SN) != null) {
 			this.id = "Device_" + CommonUtils.getHostName() + "_" + attributes.get(Constants.DEVICE_SN);
 		}
 	}
@@ -149,7 +159,7 @@ public class Device extends BaseObject {
 		return state;
 	}
 
-	public void setState(int state) {
+	public synchronized void setState(int state) {
 		if (this.state != state)
 			setChanged();
 		this.state = state;
@@ -166,7 +176,7 @@ public class Device extends BaseObject {
 		return preState;
 	}
 
-	public void setPreState(int preState) {
+	public synchronized void setPreState(int preState) {
 		this.preState = preState;
 	}
 
@@ -206,7 +216,7 @@ public class Device extends BaseObject {
 
 	public <T> void addAttribute(String key, T value) {
 		this.attributes.put(key, value);
-		if (Constants.DEVICE_SN.equals(key)) {
+		if (Constants.DEVICE_SN.equals(key) && value != null) {
 			this.id = "Device_" + CommonUtils.getHostName() + "_" + value;
 		}
 	}
@@ -224,7 +234,7 @@ public class Device extends BaseObject {
 		return taskStatus;
 	}
 
-	public void setTaskStatus(String status) {
+	public synchronized void setTaskStatus(String status) {
 		this.taskStatus = status;
 	}
 
@@ -261,27 +271,36 @@ public class Device extends BaseObject {
 			Object o = dv.getAttribute(att);
 			if (att.equalsIgnoreCase("id")) {
 				o = dv.getId();
+				c = this.getId();
 			}
-			if(o != null && o instanceof String && ((String) o).equals(Constants.DEVICE_ATTRIBUTE_WILDCARD)) {
-					continue;
-			}else {
+			if (o != null && o instanceof String && ((String) o).equals(Constants.DEVICE_ATTRIBUTE_WILDCARD)) {
+				continue;
+			} else {
 				String val = null;
-				if(c != null && c instanceof String) {
+				if (c != null && c instanceof String) {
 					val = ((String) c);
 				}
-				if(val.indexOf(Constants.DEVICE_ATTRIBUTE_OR) > 0) {
+				if (val.indexOf(Constants.DEVICE_ATTRIBUTE_OR) > 0) {
 					String[] arr = val.split(Constants.DEVICE_ATTRIBUTE_OR);
-					if(arr != null && arr.length > 0) {
+					if (arr != null && arr.length > 0) {
 						boolean match = false;
-						for(String a : arr) {
+						for (String a : arr) {
 							a = a.trim();
-							if(o != null && a.equals(o)) {
+							if (o != null && a.equals(o)) {
 								match = true;
 								break;
 							}
 						}
-						if(match)
+						if (match)
 							continue;
+					}
+				}
+				if(val.indexOf(Constants.DEVICE_ATTRIBUTE_NOT) >=0) {
+					val = val.replace(Constants.DEVICE_ATTRIBUTE_NOT, "").trim();
+					if (o == null || !val.equals(o)) {
+						continue;
+					}else {
+						return false;
 					}
 				}
 				if ((c != null && !c.equals(o)) || (c == null && null != o)) {
@@ -290,6 +309,13 @@ public class Device extends BaseObject {
 			}
 		}
 		return true;
+	}
+
+	public String info() {
+		StringBuilder info = new StringBuilder(80);
+		info.append("DEVICE[id:").append(id).append(",state:").append(state).append(",preState:").append(preState);
+		info.append(",taskStatus:").append(taskStatus).append(",role:").append(role).append("]");
+		return info.toString();
 	}
 
 	@Override
@@ -304,17 +330,17 @@ public class Device extends BaseObject {
 		else
 			return false;
 	}
-	
+
 	@Override
 	public int hashCode() {
 		return this.getId().hashCode();
 	}
-	
+
 	/**
-	 * Check if current device was connected.
-	 * Call this function before reservation operation.
-	 * if not connected, should update the device status to lost_temp.
-	 * Different Device type should Override this method.
+	 * Check if current device was connected. Call this function before
+	 * reservation operation. if not connected, should update the device status
+	 * to lost_temp. Different Device type should Override this method.
+	 * 
 	 * @return
 	 */
 	public boolean isConnected() {

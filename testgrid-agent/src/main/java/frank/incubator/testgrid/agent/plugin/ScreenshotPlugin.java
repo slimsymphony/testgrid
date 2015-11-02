@@ -61,8 +61,7 @@ public class ScreenshotPlugin extends AbstractAgentPlugin<File> {
 		if (o != null)
 			strategy = FolderStrategy.parse(o.toString());
 		if (this.getAttributes().containsKey("cleanupExpireScreenshots")) {
-			this.cleanupExpireScreenshots = CommonUtils.parseBoolean(getAttributes().get("cleanupExpireScreenshots")
-					.toString(), true);
+			this.cleanupExpireScreenshots = CommonUtils.parseBoolean(getAttributes().get("cleanupExpireScreenshots").toString(), true);
 		}
 		if (this.getAttributes().containsKey("expireDays")) {
 			Object v = getAttributes().get("expireDays");
@@ -78,67 +77,65 @@ public class ScreenshotPlugin extends AbstractAgentPlugin<File> {
 
 		File folder = null;
 		switch (strategy) {
-		case DEVICE_BASED:
-			while (it.hasNext()) {
-				d = it.next();
-				sn = d.getAttribute(Constants.DEVICE_SN);
-				currentSN = sn;
-				if (d.getState() != Device.DEVICE_LOST && d.getState() != Device.DEVICE_LOST_TEMP) {
-					folder = new File(workspace, "screenshots/" + sn);
-					if (!folder.exists())
-						folder.mkdirs();
-					filename = "screen_" + sn + "_" + current + ".png";
-					f = new File(folder, filename);
-					StringBuilder sb = new StringBuilder();
-					if (CommonUtils.isWindows()) {
-						sb.append(adb()).append(" -s ").append(sn).append(" shell screencap -p /sdcard/")
-								.append(filename).append(" && ").append(adb()).append(" -s ").append(sn)
-								.append(" pull /sdcard/").append(filename).append(" && ").append(adb()).append(" -s ")
-								.append(sn).append(" shell rm /sdcard/").append(filename);
-					} else {
-						sb.append(adb()).append(" shell screencap -p | sed 's/\r$//' > ").append(filename);
-					}
-					try {
-						CommonUtils.exec(sb.toString(), folder.getAbsolutePath());
-					} catch (Exception e) {
-						throw new RuntimeException("exec screen capture failed.", e);
-					}
-					if (!f.exists())
-						log.error("screenshot for device:" + sn + " @" + current + " failed.");
-				}
-			}
-			break;
-		case TIME_BASED:
-			folder = new File(workspace, "screenshots/screenshot" + "_" + current);
-			if (!folder.exists())
-				folder.mkdirs();
-
-			while (it.hasNext()) {
-				d = it.next();
-				if (d.getState() != Device.DEVICE_LOST && d.getState() != Device.DEVICE_LOST_TEMP) {
+			case DEVICE_BASED:
+				while (it.hasNext()) {
+					d = it.next();
 					sn = d.getAttribute(Constants.DEVICE_SN);
 					currentSN = sn;
-					filename = "screen_" + sn + "_" + current + ".png";
-					f = new File(folder, filename);
-					StringBuilder sb = new StringBuilder();
-					if (CommonUtils.isWindows()) {
-						sb.append(adb()).append(" -s ").append(sn).append(" shell screencap -p /sdcard/")
-								.append(filename).append(" && ").append(adb()).append(" -s ").append(sn)
-								.append(" pull /sdcard/").append(filename).append(" && ").append(adb()).append(" -s ")
-								.append(sn).append(" shell rm /sdcard/").append(filename);
-					} else {
-						sb.append(adb()).append(" shell screencap -p | sed 's/\r$//' > ").append(filename);
+					if (d.getState() != Device.DEVICE_LOST && d.getState() != Device.DEVICE_LOST_TEMP) {
+						folder = new File(workspace, "screenshots/" + sn);
+						if (!folder.exists())
+							folder.mkdirs();
+						filename = "screen_" + sn + "_" + current + ".png";
+						f = new File(folder, filename);
+						StringBuilder sb = new StringBuilder();
+						if (CommonUtils.isWindows()) {
+							sb.append(adb()).append(" -s ").append(sn).append(" shell screencap -p /sdcard/").append(filename).append(" && ").append(adb())
+									.append(" -s ").append(sn).append(" pull /sdcard/").append(filename).append(" && ").append(adb()).append(" -s ").append(sn)
+									.append(" shell rm /sdcard/").append(filename);
+						} else {
+							sb.append(adb()).append(" shell screencap -p | sed 's/\r$//' > ").append(filename);
+						}
+						try {
+							CommonUtils.exec(sb.toString(), folder.getAbsolutePath());
+						} catch (Exception e) {
+							throw new RuntimeException("exec screen capture failed.", e);
+						}
+						if (!f.exists())
+							log.error("screenshot for device:" + sn + " @" + current + " failed.");
 					}
-					try {
-						CommonUtils.exec(sb.toString(), folder.getAbsolutePath());
-					} catch (Exception e) {
-						throw new RuntimeException("exec screen capture failed.", e);
-					}
-					if (!f.exists())
-						log.error("screenshot for device:" + sn + " @" + current + " failed.");
 				}
-			}
-			break;
+				break;
+			case TIME_BASED:
+				folder = new File(workspace, "screenshots/screenshot" + "_" + current);
+				if (!folder.exists())
+					folder.mkdirs();
+
+				while (it.hasNext()) {
+					d = it.next();
+					if (d.getState() != Device.DEVICE_LOST && d.getState() != Device.DEVICE_LOST_TEMP) {
+						sn = d.getAttribute(Constants.DEVICE_SN);
+						currentSN = sn;
+						filename = "screen_" + sn + "_" + current + ".png";
+						f = new File(folder, filename);
+						StringBuilder sb = new StringBuilder();
+						if (CommonUtils.isWindows()) {
+							sb.append(adb()).append(" -s ").append(sn).append(" shell screencap -p /sdcard/").append(filename).append(" && ").append(adb())
+									.append(" -s ").append(sn).append(" pull /sdcard/").append(filename).append(" && ").append(adb()).append(" -s ").append(sn)
+									.append(" shell rm /sdcard/").append(filename);
+						} else {
+							sb.append(adb()).append(" shell screencap -p | sed 's/\r$//' > ").append(filename);
+						}
+						try {
+							CommonUtils.exec(sb.toString(), folder.getAbsolutePath());
+						} catch (Exception e) {
+							throw new RuntimeException("exec screen capture failed.", e);
+						}
+						if (!f.exists())
+							log.error("screenshot for device:" + sn + " @" + current + " failed.");
+					}
+				}
+				break;
 		}
 		if (cleanupExpireScreenshots) {
 			cleanupExpired(System.currentTimeMillis(), new File(workspace, "screenshots"));

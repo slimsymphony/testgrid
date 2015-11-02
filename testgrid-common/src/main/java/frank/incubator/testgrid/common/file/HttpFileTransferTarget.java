@@ -85,31 +85,28 @@ public final class HttpFileTransferTarget extends Thread implements FileTransfer
 			for (String filename : fileList.keySet()) {
 				final long fl = fileList.get(filename);
 				final String fn = filename;
-				File f = Request.Get(url + "&token=" + token + "&filename=" + filename).execute()
-						.handleResponse(new ResponseHandler<File>() {
-							@Override
-							public File handleResponse(HttpResponse response) throws ClientProtocolException,
-									IOException {
-								File file = new File(localDestDir, fn);
-								FileOutputStream fs = null;
-								try {
-									if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-										fs = new FileOutputStream(file);
-										response.getEntity().writeTo(fs);
-										fs.flush();
-										if (fl != file.length()) {
-											throw new Exception("File[" + fn + "] length is:" + file.length()
-													+ ", not equal to expected length:" + fl);
-										}
-									}
-								} catch (Exception ex) {
-									log.error("Download file:" + fn + " got exception.", ex);
-								} finally {
-									CommonUtils.closeQuietly(fs);
+				File f = Request.Get(url + "&token=" + token + "&filename=" + filename).execute().handleResponse(new ResponseHandler<File>() {
+					@Override
+					public File handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
+						File file = new File(localDestDir, fn);
+						FileOutputStream fs = null;
+						try {
+							if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+								fs = new FileOutputStream(file);
+								response.getEntity().writeTo(fs);
+								fs.flush();
+								if (fl != file.length()) {
+									throw new Exception("File[" + fn + "] length is:" + file.length() + ", not equal to expected length:" + fl);
 								}
-								return file;
 							}
-						});
+						} catch (Exception ex) {
+							log.error("Download file:" + fn + " got exception.", ex);
+						} finally {
+							CommonUtils.closeQuietly(fs);
+						}
+						return file;
+					}
+				});
 				if (f != null && f.exists() && f.length() == fl) {
 					files.add(f);
 				} else {
@@ -133,8 +130,7 @@ public final class HttpFileTransferTarget extends Thread implements FileTransfer
 		if (mode == FileTransferMode.TARGET_HOST) {
 			File folder = new File(repoPath, token);
 			if (!folder.exists() || !folder.isDirectory()) {
-				throw new Exception("Http Transfer receive failed." + folder.getAbsolutePath()
-						+ " could not be accessed.");
+				throw new Exception("Http Transfer receive failed." + folder.getAbsolutePath() + " could not be accessed.");
 			}
 
 			File f = null;
@@ -142,8 +138,7 @@ public final class HttpFileTransferTarget extends Thread implements FileTransfer
 				long fl = fileList.get(fn);
 				f = new File(folder, fn);
 				if (!f.exists() || f.length() != fl) {
-					throw new Exception("Http Transfer receive failed.  Validate File:" + f.getAbsolutePath()
-							+ " not equals with assigned principle");
+					throw new Exception("Http Transfer receive failed.  Validate File:" + f.getAbsolutePath() + " not equals with assigned principle");
 				}
 				if (!folder.equals(localDestDir)) {
 					FileUtils.copyFileToDirectory(f, localDestDir);

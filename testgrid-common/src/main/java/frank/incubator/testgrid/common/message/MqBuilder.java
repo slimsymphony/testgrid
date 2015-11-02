@@ -27,10 +27,10 @@ public enum MqBuilder {
 		if (mf == null)
 			return null;
 		switch (mf) {
-		case ActiveMQ:
-			return new ActiveMQConnectionFactory(uri);
-		default:
-			return null;
+			case ActiveMQ:
+				return new ActiveMQConnectionFactory(uri);
+			default:
+				return null;
 		}
 	}
 

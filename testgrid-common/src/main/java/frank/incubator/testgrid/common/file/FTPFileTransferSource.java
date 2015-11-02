@@ -67,8 +67,7 @@ public final class FTPFileTransferSource implements FileTransferSource {
 							log.info("Succeed to upload file " + file.getName());
 						} else {
 							log.error("Failed to upload file " + file.getName());
-							throw new Exception("Fail to upload file to FTP server. token=" + token + ", failure file="
-									+ file.getName());
+							throw new Exception("Fail to upload file to FTP server. token=" + token + ", failure file=" + file.getName());
 						}
 					} catch (Exception e) {
 						log.error("Fail to push file to FTP server. token=" + token, e);
@@ -103,18 +102,18 @@ public final class FTPFileTransferSource implements FileTransferSource {
 
 	public boolean deleteFiles(String directoyNamePath) throws Exception {
 		boolean result = true;
-		//ftp.changeToParentDirectory();
+		// ftp.changeToParentDirectory();
 		String targetPath = ftp.printWorkingDirectory() + "/" + directoyNamePath;
 		targetPath = targetPath.replaceAll("//", "/");
 		FTPFile[] fileList = ftp.listFiles(targetPath);
 		for (FTPFile file : fileList) {
 			if (file.isDirectory()) {
-				log.info("Delete sub directory " + file.getName());
+				log.info("Delete sub directory {}", file.getName());
 				String subDirectoryNamePath = directoyNamePath + "/" + file.getName();
 				deleteFiles(subDirectoryNamePath);
 			}
 			if (file.isFile()) {
-				log.info("Delete file " + file.getName());
+				log.info("Delete file {}", file.getName());
 				try {
 					ftp.deleteFile(targetPath + "/" + file.getName());
 				} catch (IOException e) {
@@ -122,7 +121,7 @@ public final class FTPFileTransferSource implements FileTransferSource {
 				}
 			}
 		}
-		log.info("Delete empty directory after " + directoyNamePath);
+		log.info("Delete empty directory after {}", directoyNamePath);
 		ftp.removeDirectory(targetPath);
 		return result;
 	}
@@ -132,10 +131,10 @@ public final class FTPFileTransferSource implements FileTransferSource {
 		try {
 			if (!ftp.isConnected()) {
 				ftp.connect(host, port);
-				log.info("Connected to " + host + ":" + port);
+				log.info("Connected to {}:{}", host, port);
 				ftp.login(userName, password);
 				int reply = ftp.getReplyCode();
-				log.debug("Got reply:" + reply);
+				log.debug("Got reply:{}", reply);
 				if (!FTPReply.isPositiveCompletion(reply)) {
 					ftp.disconnect();
 					log.error("FTP server refused connection.");

@@ -48,20 +48,26 @@ public class MessageBroker extends BaseObject implements ExceptionListener {
 	private LogConnector log;
 	private String hostType;
 	private MqBuilder factoryType;
+	private Notifier notifier;
 
 	public MessageBroker(String id, String uri, String mqType) throws MessageException {
 		this(id, uri, mqType, "");
 	}
 
 	public MessageBroker(String id, String uri, MqBuilder factoryType, String hostType) throws MessageException {
+		this(id, uri, factoryType, hostType, null);	
+	}
+	
+	public MessageBroker(String id, String uri, MqBuilder factoryType, String hostType, Notifier notifier) throws MessageException {
 		this.id = id;
 		this.uri = uri;
 		this.factoryType = factoryType;
 		this.hostType = hostType;
 		this.log = LogUtils.get("Broker-" + id);
-		establishConnection();
+		this.notifier = notifier;
+		establishConnection(false);
 	}
-
+	
 	public MessageBroker(String name, String uri, String mqType, String hostType) throws MessageException {
 		this(name, uri, MqBuilder.parse(mqType), hostType);
 	}
@@ -102,15 +108,15 @@ public class MessageBroker extends BaseObject implements ExceptionListener {
 		return factoryType;
 	}
 
-	public void establishConnection() throws MessageException {
+	public void establishConnection(boolean isRecovery) throws MessageException {
 		int retryTimes = 0;
 		while (true) {
+			log.info("This is the {} times to establish connection to mq.", retryTimes);
 			try {
 				if (connectionFactory == null)
 					connectionFactory = MqBuilder.getFactoryInstance(factoryType, uri);
 				if (connectionFactory == null)
-					throw new NullPointerException("Connection Factory is Null for broker[" + id + ":" + factoryType
-							+ "]!");
+					throw new NullPointerException("Connection Factory is Null for broker[" + id + ":" + factoryType + "]!");
 				conn = connectionFactory.createConnection();
 				conn.setExceptionListener(this);
 				conn.start();
@@ -118,26 +124,27 @@ public class MessageBroker extends BaseObject implements ExceptionListener {
 				for (Pipe hn : pipes.values()) {
 					rebindPipe(hn);
 				}
+				if(isRecovery && notifier != null) {
+					Map<String,String> params = new HashMap<String,String>();
+					params.put("topic", "");
+					params.put("channel", "sms");
+					params.put("content", "MessageHub connection recovered,Connection is:"+this.uri+",Please take easy :)");
+					notifier.sendNotification(params);
+				}
 				break;
 			} catch (Exception e) {
-				log.error("Establish Connection to Message Service got exception. broker[" + id + ":" + factoryType
-						+ "]", e);
+				log.error("Establish Connection to Message Service got exception. broker[" + id + ":" + factoryType + "]", e);
 				retryTimes++;
 				try {
 					long sleepSeconds = retryTimes * 10;
-					if (sleepSeconds > 60)
-						sleepSeconds = 60;
-					TimeUnit.SECONDS.sleep(60);
+					if (sleepSeconds > 30)
+						sleepSeconds = 30;
+					TimeUnit.SECONDS.sleep(sleepSeconds);
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
 				}
 
-				log.error("Start retry establishing connection to Message Service[" + id + ":" + factoryType + "] the "
-						+ retryTimes + " times.");
-				if (retryTimes == 10) {
-					throw new MessageException("Create MessageBroker failed. Can't connect to Message Service[" + uri
-							+ "].", e);
-				}
+				log.error("Start retry establishing connection to Message Service[" + id + ":" + factoryType + "] the " + retryTimes + " times.");
 			}
 		}
 	}
@@ -153,8 +160,7 @@ public class MessageBroker extends BaseObject implements ExceptionListener {
 	 * @return
 	 * @throws MessageException
 	 */
-	public Pipe bindHandlers(Type type, String name, String messageSelector, MessageListener listener,
-			MessageFilter... filters) throws MessageException {
+	public Pipe bindHandlers(Type type, String name, String messageSelector, MessageListener listener, MessageFilter... filters) throws MessageException {
 		return bindHandlers(type, name, messageSelector, listener, null, filters);
 	}
 
@@ -170,8 +176,8 @@ public class MessageBroker extends BaseObject implements ExceptionListener {
 	 * @return
 	 * @throws MessageException
 	 */
-	public Pipe bindHandlers(Type type, String name, String messageSelector, MessageListener listener,
-			OutputStream tracker, MessageFilter... filters) throws MessageException {
+	public Pipe bindHandlers(Type type, String name, String messageSelector, MessageListener listener, OutputStream tracker, MessageFilter... filters)
+			throws MessageException {
 		if (type == null || name == null)
 			throw new MessageException("Unqualified param provided for binding.type:" + type + ",name=" + name);
 		Pipe hn = new Pipe(name);
@@ -198,8 +204,7 @@ public class MessageBroker extends BaseObject implements ExceptionListener {
 				}
 
 				if (listener != null) {
-					MessageListenerAdapter utml = new MessageListenerAdapter(name + "-listener", null, tracker,
-							listener, filters);
+					MessageListenerAdapter utml = new MessageListenerAdapter(name + "-listener", null, tracker, listener, filters);
 					ts.setMessageListener(utml);
 					hn.setListener(utml);
 				}
@@ -220,20 +225,18 @@ public class MessageBroker extends BaseObject implements ExceptionListener {
 					hn.setConsumer(qr);
 				}
 				if (listener != null) {
-					MessageListenerAdapter utml = new MessageListenerAdapter(name + "-listener", null, tracker,
-							listener, filters);
+					MessageListenerAdapter utml = new MessageListenerAdapter(name + "-listener", null, tracker, listener, filters);
 					qr.setMessageListener(utml);
 					hn.setListener(utml);
 				}
 			}
 
 			pipes.put(name, hn);
-			log.info("Bind success, type:" + type + ",name:" + name + ",listener:" + listener);
+			log.info("Bind success, type:{},name:{},listener:{}", type, name, listener);
 			return hn;
 		} catch (JMSException ex) {
 			onException(ex);
-			throw new MessageException("Bind message handler failed. type:" + type + ",name=" + name + ",listener:"
-					+ listener, ex);
+			throw new MessageException("Bind message handler failed. type:" + type + ",name=" + name + ",listener:" + listener, ex);
 		}
 	}
 
@@ -248,8 +251,7 @@ public class MessageBroker extends BaseObject implements ExceptionListener {
 			if (pipe.getConsumer() != null) {
 				TopicSubscriber ts = null;
 				if (pipe.getMessageSelector() != null && !pipe.getMessageSelector().trim().isEmpty())
-					ts = ((TopicSession) session).createSubscriber((Topic) pipe.getDest(), pipe.getMessageSelector(),
-							false);
+					ts = ((TopicSession) session).createSubscriber((Topic) pipe.getDest(), pipe.getMessageSelector(), false);
 				else
 					ts = ((TopicSession) session).createSubscriber((Topic) pipe.getDest());
 				pipe.setConsumer(ts);
@@ -332,12 +334,19 @@ public class MessageBroker extends BaseObject implements ExceptionListener {
 	@Override
 	public synchronized void onException(JMSException exception) {
 		log.error("Message Hub met Exception.", exception);
+		if(notifier != null) {
+			Map<String,String> params = new HashMap<String,String>();
+			params.put("topic", "");
+			params.put("channel", "sms");
+			params.put("content", "MessageHub connection Lost! Connection is:"+this.uri+",Please check ASAP. :(");
+			notifier.sendNotification(params);
+		}
 		boolean connectionOk = verifyConnection();
 		if (!connectionOk) {
 			log.error("Try to recreate connection and register all the consumer/producer.");
 			dispose4Reconnect();
 			try {
-				establishConnection();
+				establishConnection(true);
 			} catch (Exception ex) {
 				log.error("Estabilish Connection failed broker[" + id + "].");
 			}

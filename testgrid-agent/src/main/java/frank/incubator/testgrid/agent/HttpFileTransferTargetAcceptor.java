@@ -83,7 +83,7 @@ public final class HttpFileTransferTargetAcceptor extends HttpServlet {
 								tokenFolder.delete();
 						}
 						tokenFolder.mkdirs();
-						log.info("current task folder is :" + tokenFolder.getAbsolutePath());
+						log.info("current task folder is :{}", tokenFolder.getAbsolutePath());
 						break;
 					}
 				}
@@ -102,13 +102,12 @@ public final class HttpFileTransferTargetAcceptor extends HttpServlet {
 						file = new File(tokenFolder, fileName.substring(fileName.lastIndexOf("/") + 1));
 					}
 					fi.write(file);
-					log.info("Uploaded Filename: " + fileName);
+					log.info("Uploaded Filename: {}", fileName);
 				}
 			}
 		} catch (Exception ex) {
 			log.error("Got exception when receiving uploding files.", ex);
-			response.sendError(HttpStatus.SC_INTERNAL_SERVER_ERROR,
-					"Got exception when receiving uploding files:" + ex.getMessage());
+			response.sendError(HttpStatus.SC_INTERNAL_SERVER_ERROR, "Got exception when receiving uploding files:" + ex.getMessage());
 		}
 	}
 

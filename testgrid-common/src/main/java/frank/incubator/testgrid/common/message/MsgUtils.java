@@ -131,8 +131,7 @@ public class MsgUtils {
 		}
 	}
 
-	public static void sendTextToDest(String uri, Destination dest, String text,
-			Map<String, ? extends Object> properties) throws JMSException {
+	public static void sendTextToDest(String uri, Destination dest, String text, Map<String, ? extends Object> properties) throws JMSException {
 		ConnectionFactory connectionFactory = null;
 		Connection conn = null;
 		Session session = null;
@@ -180,8 +179,8 @@ public class MsgUtils {
 			return msg.getText();
 	}
 
-	public static TopicSubscriber subscribeTopic(TopicSession session, String topicName, String subscriberName,
-			boolean durable, MessageListener listener) throws JMSException {
+	public static TopicSubscriber subscribeTopic(TopicSession session, String topicName, String subscriberName, boolean durable, MessageListener listener)
+			throws JMSException {
 		TopicSubscriber ts = null;
 		if (durable)
 			ts = session.createDurableSubscriber(session.createTopic(topicName), subscriberName);
@@ -241,8 +240,7 @@ public class MsgUtils {
 			return msg;
 	}
 
-	public static void subscribeTopic(String url, String topic, String subscriberName, boolean durable,
-			MessageHub listener) {
+	public static void subscribeTopic(String url, String topic, String subscriberName, boolean durable, MessageHub listener) {
 		// TODO Auto-generated method stub
 
 	}

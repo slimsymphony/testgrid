@@ -20,16 +20,17 @@ public class PluginTest {
 	/**
 	 * @param args
 	 */
-	public static void main( String[] args ) {
-		String pluginConfig = CommonUtils.loadResourcesAsString( Constants.PLUGIN_CONFIG_FILE, CommonUtils.RESOURCE_LOAD_MODE_ONLY_EMBEDED, true );
-		Collection<PluginDescriptor> pds = CommonUtils.fromJson( pluginConfig, new TypeToken<Collection<PluginDescriptor>>() {}.getType() );
-		for( PluginDescriptor pd : pds )
-			System.out.println( pd );
+	public static void main(String[] args) {
+		String pluginConfig = CommonUtils.loadResourcesAsString(Constants.PLUGIN_CONFIG_FILE, CommonUtils.RESOURCE_LOAD_MODE_ONLY_EMBEDED, true);
+		Collection<PluginDescriptor> pds = CommonUtils.fromJson(pluginConfig, new TypeToken<Collection<PluginDescriptor>>() {
+		}.getType());
+		for (PluginDescriptor pd : pds)
+			System.out.println(pd);
 		AgentNode agent = new AgentNode(null);
-		TestGridPlugin<File> plugin = null; 
+		TestGridPlugin<File> plugin = null;
 		try {
-			plugin = PluginManager.initialize( agent, "ScreenshotPlugin" );
-		} catch ( Exception e ) {
+			plugin = PluginManager.initialize(agent, "ScreenshotPlugin");
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		System.out.println("finished");

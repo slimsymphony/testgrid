@@ -241,7 +241,7 @@ last refresh time:<%=new Date()%>
 		</div>
 		<div id="agent">
 			<span style="font-size: 22pt; color: green;">Agent Status</span>
-			<%= CommonUtils.format4Web( CommonUtils.renderToHtml( agent.getNodeStatus(), 0, counter ) ) %>
+			<%// CommonUtils.format4Web( CommonUtils.renderToHtml( agent.getNodeStatus(), 0, counter ) ) %>
 		</div>
 	</div>
 	<br />

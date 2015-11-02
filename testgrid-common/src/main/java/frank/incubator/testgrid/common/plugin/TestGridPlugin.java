@@ -92,7 +92,7 @@ public interface TestGridPlugin<V> extends Callable<V>, FutureCallback<V> {
 	 * @return
 	 */
 	public int getState();
-	
+
 	/**
 	 * implement FS watch actions;
 	 */

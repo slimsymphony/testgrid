@@ -58,18 +58,18 @@ public class NfsFTChannel extends FileTransferChannel {
 	 */
 	@Override
 	public boolean send(String token, Collection<File> fileList, LogConnector log) {
-		if(log != null)
+		if (log != null)
 			log.info("NfsChannel begin sending files. token=" + token);
-		LocalFileTransferSource source = new LocalFileTransferSource(FileTransferMode.THIRDPARTY_HOST, new File(
-				getProperty("sourceBase", "")), new File(getProperty("targetBase", "")), log.getOs());
+		LocalFileTransferSource source = new LocalFileTransferSource(FileTransferMode.THIRDPARTY_HOST, new File(getProperty("sourceBase", "")), new File(
+				getProperty("targetBase", "")), log.getOs());
 		try {
 			source.publish(token, fileList);
 		} catch (Exception e) {
-			if(log != null)
+			if (log != null)
 				log.error("Sending Files via Nfs failed. token=" + token, e);
 			return false;
 		}
-		if(log != null)
+		if (log != null)
 			log.info("NfsChannel finished sending files. token=" + token);
 		return true;
 	}
@@ -83,18 +83,18 @@ public class NfsFTChannel extends FileTransferChannel {
 	 */
 	@Override
 	public boolean receive(String token, Map<String, Long> fileList, File localDestDir, LogConnector log) {
-		if(log != null)
+		if (log != null)
 			log.info("NfsChannel begin receiving files. token=" + token);
-		LocalFileTransferTarget target = new LocalFileTransferTarget(FileTransferMode.THIRDPARTY_HOST, new File(
-				getProperty("sourceBase", "")), new File(getProperty("targetBase", "")), log.getOs());
+		LocalFileTransferTarget target = new LocalFileTransferTarget(FileTransferMode.THIRDPARTY_HOST, new File(getProperty("sourceBase", "")), new File(
+				getProperty("targetBase", "")), log.getOs());
 		try {
 			target.fetch(token, fileList, localDestDir);
 		} catch (Exception e) {
-			if(log != null)
+			if (log != null)
 				log.error("Receiving Files via Nfs failed. token=" + token, e);
 			return false;
 		}
-		if(log != null)
+		if (log != null)
 			log.info("NfsChannel finished receiving files. token=" + token);
 		target.dispose();
 		return true;

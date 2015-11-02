@@ -16,14 +16,14 @@ public class DeviceCapacity {
 	public DeviceCapacity(DeviceRequirement requirement) {
 		this.requirement = requirement;
 	}
-	
+
 	public DeviceCapacity(String testId, DeviceRequirement requirement) {
 		this.testId = testId;
 		this.requirement = requirement;
 	}
 
 	DeviceRequirement requirement;
-	
+
 	private String testId;
 
 	int available;

@@ -14,14 +14,14 @@ public class FileWatcherTest {
 
 	/**
 	 * @param args
-	 * @throws IOException 
+	 * @throws IOException
 	 */
-	public static void main( String[] args ) throws IOException {
+	public static void main(String[] args) throws IOException {
 		String p = "C:/develop/eclipse-workspaces/java8_workspace/testgrid/testgrid-agent/workspace";
-		Path path = Paths.get( p );
+		Path path = Paths.get(p);
 		DeviceManager dm = new DeviceManager(null);
 		DeviceDetector dd = new AndroidDeviceDetector(path.toFile(), dm, Constants.ONE_MINUTE);
-		DeviceConfigFileWatcher dcfw = new DeviceConfigFileWatcher(path, dd,"properties");
+		DeviceConfigFileWatcher dcfw = new DeviceConfigFileWatcher(path, dd, "properties");
 		dcfw.start();
 	}
 

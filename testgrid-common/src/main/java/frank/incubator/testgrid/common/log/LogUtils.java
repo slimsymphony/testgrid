@@ -48,8 +48,7 @@ public class LogUtils {
 		if (logger == null) {
 			logger = getLogger(name);
 		}
-		log = new LogConnector(logger, new BufferedMessageOutputStream(pipe.getParentBroker().getSession(),
-				pipe.getProducer(), criteria));
+		log = new LogConnector(logger, new BufferedMessageOutputStream(pipe.getParentBroker().getSession(), pipe.getProducer(), criteria));
 		return log;
 	}
 
@@ -91,9 +90,9 @@ public class LogUtils {
 		}
 		return log;
 	}
-	
+
 	public static Logger getLog(String appender) {
-		return (Logger)LoggerFactory.getLogger(appender);
+		return (Logger) LoggerFactory.getLogger(appender);
 	}
 
 	private static Logger dynamic(String name) {
@@ -108,7 +107,7 @@ public class LogUtils {
 		 * thName.trim().replaceAll( " ", "_" );
 		 */
 		PatternLayoutEncoder encoder = new PatternLayoutEncoder();
-		encoder.setPattern("%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n");
+		encoder.setPattern("%d{HH:mm:ss.SSS} [%thread][%-5level][%logger{36}] - %msg%n");
 		encoder.setContext(context);
 		encoder.setCharset(Charset.forName("UTF-8"));
 

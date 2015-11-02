@@ -6,10 +6,15 @@ import static frank.incubator.testgrid.common.Constants.HUB_TASK_PUBLISH;
 import static frank.incubator.testgrid.common.message.MessageHub.setProperty;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringWriter;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchEvent.Kind;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -18,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,6 +37,7 @@ import javax.jms.Topic;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 
 import com.google.common.eventbus.EventBus;
 import com.google.gson.reflect.TypeToken;
@@ -50,12 +57,14 @@ import frank.incubator.testgrid.common.StatusChangeNotifier;
 import frank.incubator.testgrid.common.file.FileTransferDescriptor;
 import frank.incubator.testgrid.common.file.FileTransferService;
 import frank.incubator.testgrid.common.file.FileTransferTask;
+import frank.incubator.testgrid.common.file.FileWatchService;
 import frank.incubator.testgrid.common.log.LogConnector;
 import frank.incubator.testgrid.common.log.LogUtils;
 import frank.incubator.testgrid.common.message.BrokerDescriptor;
 import frank.incubator.testgrid.common.message.BufferedMessageOutputStream;
 import frank.incubator.testgrid.common.message.MessageException;
 import frank.incubator.testgrid.common.message.MessageHub;
+import frank.incubator.testgrid.common.message.Notifier;
 import frank.incubator.testgrid.common.message.Pipe;
 import frank.incubator.testgrid.common.model.Agent;
 import frank.incubator.testgrid.common.model.Device;
@@ -86,7 +95,7 @@ public final class AgentNode extends Thread {
 	private DeviceManager dm;
 
 	private DeviceDetector androidDetector;
-	
+
 	private DeviceDetector iosDetector;
 
 	private boolean isRunning;
@@ -119,6 +128,10 @@ public final class AgentNode extends Thread {
 
 	private FileTransferService fts;
 
+	private TaskCleaner cleaner;
+	
+	private Notifier mqNotifier;
+
 	/**
 	 * Store running tasks. Key was the test object. And Value is TaskExecutor
 	 * instance.
@@ -131,6 +144,7 @@ public final class AgentNode extends Thread {
 		log.info("EventBus Loaded...");
 		taskStatusEventBus = new EventBus();
 		deviceBusyEventBus = new EventBus();
+		mqNotifier = new Notifier();
 		log.info("Configuration Loaded...");
 		loadConfigFromFile();
 		log.info("Workspace initialzing...");
@@ -146,7 +160,16 @@ public final class AgentNode extends Thread {
 		} else {
 			workspace.mkdirs();
 		}
-		fts = new FileTransferService(hub, ftDescriptor, workspace);
+		boolean supportShareZone = CommonUtils.parseBoolean((String) getConfig("support_share_zone"));
+		File shareZone = null;
+		if(supportShareZone) {
+			shareZone = new File(workspace, "shareZone");
+			if(!shareZone.exists() || !shareZone.isDirectory()) {
+				shareZone.mkdirs();
+			}
+		}
+		Set<String> exts = CommonUtils.fromJson((String) getConfig("share_zone_extions"), new TypeToken<Set<String>>(){}.getType());
+		fts = new FileTransferService(hub, ftDescriptor, workspace, null, shareZone, exts);
 		log.info("Message hub initialzing...");
 		try {
 			initMessageHub(uri);
@@ -157,29 +180,49 @@ public final class AgentNode extends Thread {
 		log.info("DeviceDetector start working...");
 		notifier = new StatusChangeNotifier(hub, Constants.MSG_TARGET_AGENT);
 		dm = new DeviceManager(Constants.ONE_MINUTE * 5, notifier);
-		long scanInterval = CommonUtils.parseLong((String)getConfig(Constants.AGENT_CONFIG_DEVICE_DETECT_INTERVAL), Constants.ONE_MINUTE);
-		if(CommonUtils.getOsType().equals(Constants.OS_MAC)) {
+		Map<String, Object> defaultAttrs = CommonUtils.fromJson(this.getConfig(Constants.AGENT_CONFIG_DEVICE_DEFAULT_ATTRS, String.class, "{}"),
+				new TypeToken<Map<String, Object>>() {
+				}.getType());
+		if (defaultAttrs != null && !defaultAttrs.isEmpty()) {
+			dm.getDefaultAttributes().putAll(defaultAttrs);
+		}
+		long scanInterval = CommonUtils.parseLong((String) getConfig(Constants.AGENT_CONFIG_DEVICE_DETECT_INTERVAL), Constants.ONE_MINUTE);
+		if (CommonUtils.getOsType().equals(Constants.OS_MAC)) {
 			iosDetector = new IosDeviceDetector(workspace, dm, scanInterval);
 			iosDetector.start();
-			if(!CommonUtils.parseBoolean((String) getConfig(Constants.AGENT_CONFIG_DISABLE_ANDROID_DETECTOR),false)) {
+			if (!CommonUtils.parseBoolean((String) getConfig(Constants.AGENT_CONFIG_DISABLE_ANDROID_DETECTOR), false)) {
 				androidDetector = new AndroidDeviceDetector(workspace, dm, scanInterval);
 				androidDetector.start();
 			}
-		}else {
+		} else {
 			androidDetector = new AndroidDeviceDetector(workspace, dm, scanInterval);
 			androidDetector.start();
 		}
-		
+
 		isRunning = true;
 		this.start();
 		log.info("Task scaner starting...");
 		this.taskUpdater = new InfoUpdater(this);
 		taskUpdater.start();
 
+		this.cleaner = new TaskCleaner(workspace, CommonUtils.parseLong((String) getConfig(Constants.AGENT_CONFIG_WORKSPACE_TESTFOLDER_KEEPDAYS), 7L));
+		cleaner.start();
 		if (getConfig(Constants.AGENT_CONFIG_ENABLE_PLUGIN, Boolean.class, false))
 			startPlugins();
 		if (getConfig(Constants.AGENT_CONFIG_ENABLE_HTTPSERVER, Boolean.class, false))
 			startHttpService(CommonUtils.availablePort(5451));
+	}
+
+	public DeviceDetector getAndroidDetector() {
+		return androidDetector;
+	}
+
+	public DeviceDetector getIosDetector() {
+		return iosDetector;
+	}
+
+	public Notifier getMqNotifier() {
+		return mqNotifier;
 	}
 
 	/**
@@ -220,13 +263,23 @@ public final class AgentNode extends Thread {
 		try {
 			config.load(CommonUtils.loadResources(Constants.AGENT_CONFIG_FILE, false));
 			config.load(CommonUtils.loadResources(Constants.AGENT_CONFIG_FILE, true));
-			if(CommonUtils.parseBoolean((String) getConfig(Constants.AGENT_CONFIG_DISABLE_HOSTNAME),false)){
+			if (CommonUtils.parseBoolean((String) getConfig(Constants.AGENT_CONFIG_DISABLE_HOSTNAME), false)) {
 				CommonUtils.DISABLE_HOSTNAME = true;
 			}
-			ftDescriptor = CommonUtils.fromJson(config.getProperty(Constants.AGENT_CONFIG_FTILE_TRANSFER_DESCRIPTOR),
-					FileTransferDescriptor.class);
+			ftDescriptor = CommonUtils.fromJson(config.getProperty(Constants.AGENT_CONFIG_FTILE_TRANSFER_DESCRIPTOR), FileTransferDescriptor.class);
+			mqNotifier.setCharset(config.getProperty(Constants.AGENT_CONFIG_NOTIFICATION_CHARSET,"UTF-8".intern()));
+			mqNotifier.setEnable(CommonUtils.parseBoolean(config.getProperty(Constants.AGENT_CONFIG_ENABLE_NOTIFICATION, "false"), false));
+			mqNotifier.setNotifyUrl(config.getProperty(Constants.AGENT_CONFIG_NOTIFICATION_URL,""));
+			mqNotifier.setReceivers(config.getProperty(Constants.AGENT_CONFIG_NOTIFICATION_RECEIVERS,""));
 		} catch (Exception ex) {
 			log.error("Load Agent Config File[ " + Constants.AGENT_CONFIG_FILE + " ] failed.", ex);
+		}
+		Path p = new File("").toPath();
+		try {
+			ConfigFileWatcher cfw = new ConfigFileWatcher(this, p);
+			cfw.start();
+		}catch(Exception ex) {
+			ex.printStackTrace();
 		}
 	}
 
@@ -371,29 +424,30 @@ public final class AgentNode extends Thread {
 				IOUtils.copy(in, sw);
 				bds = CommonUtils.fromJson(sw.toString(), new TypeToken<BrokerDescriptor[]>() {
 				}.getType());
-				hub = new MessageHub(Constants.MSG_TARGET_AGENT, bds);
+				hub = new MessageHub(Constants.MSG_TARGET_AGENT, mqNotifier, bds);
 			} else if (uri != null) {
-				hub = new MessageHub(uri, Constants.MSG_TARGET_AGENT);
+				hub = new MessageHub(uri, Constants.MSG_TARGET_AGENT, mqNotifier);
 			} else {
 				throw new MessageException("Can't initial messageHub, cos nor mqConfig file or uri provided.");
 			}
 
 			// agent status
 			hub.bindHandlers(Constants.BROKER_STATUS, Topic.class, HUB_AGENT_STATUS, null, null);
-			/*hub.bindHandlers(Constants.BROKER_STATUS, Topic.class, HUB_TASK_STATUS, Constants.MSG_HEAD_TARGET + "='"
-					+ this.getAgentInfo(HOST_ONLY).getHost() + "'", new WaitTaskNotifier(this, taskStatusEventBus,
-					deviceBusyEventBus));*/
-			hub.bindHandlers(Constants.BROKER_TASK, Queue.class, HUB_TASK_COMMUNICATION, Constants.MSG_HEAD_TARGET
-					+ "='" + Constants.MSG_TARGET_AGENT + CommonUtils.getHostName() + "'", new TaskCommunicator(this));
-			hub.bindHandlers(Constants.BROKER_TASK, Topic.class, HUB_TASK_PUBLISH, null, new TaskSubscriber(this,
-					taskStatusEventBus, deviceBusyEventBus));
-			hub.bindHandlers(Constants.BROKER_NOTIFICATION, Queue.class, Constants.HUB_AGENT_NOTIFICATION,
-					Constants.MSG_HEAD_TARGET + "='" + Constants.MSG_TARGET_AGENT + CommonUtils.getHostName() + "'",
-					new NotificationHandler(this));
+			/*
+			 * hub.bindHandlers(Constants.BROKER_STATUS, Topic.class,
+			 * HUB_TASK_STATUS, Constants.MSG_HEAD_TARGET + "='" +
+			 * this.getAgentInfo(HOST_ONLY).getHost() + "'", new
+			 * WaitTaskNotifier(this, taskStatusEventBus, deviceBusyEventBus));
+			 */
+			hub.bindHandlers(Constants.BROKER_TASK, Queue.class, HUB_TASK_COMMUNICATION, Constants.MSG_HEAD_TARGET + "='" + Constants.MSG_TARGET_AGENT
+					+ CommonUtils.getHostName() + "'", new TaskCommunicator(this));
+			hub.bindHandlers(Constants.BROKER_TASK, Topic.class, HUB_TASK_PUBLISH, null, new TaskSubscriber(this, taskStatusEventBus, deviceBusyEventBus));
+			hub.bindHandlers(Constants.BROKER_NOTIFICATION, Queue.class, Constants.HUB_AGENT_NOTIFICATION, Constants.MSG_HEAD_TARGET + "='"
+					+ Constants.MSG_TARGET_AGENT + CommonUtils.getHostName() + "'", new NotificationHandler(this));
 			hub.bindHandlers(Constants.BROKER_STATUS, Topic.class, Constants.HUB_TEST_STATUS, null, null);
 			hub.bindHandlers(Constants.BROKER_STATUS, Topic.class, Constants.HUB_DEVICE_STATUS, null, null);
-			hub.bindHandlers(Constants.BROKER_FT, Queue.class, Constants.HUB_FILE_TRANSFER, Constants.MSG_HEAD_TARGET
-					+ "='" + Constants.MSG_TARGET_AGENT + CommonUtils.getHostName() + "'", fts);
+			hub.bindHandlers(Constants.BROKER_FT, Queue.class, Constants.HUB_FILE_TRANSFER, Constants.MSG_HEAD_TARGET + "='" + Constants.MSG_TARGET_AGENT
+					+ CommonUtils.getHostName() + "'", fts);
 			fts.setHub(hub);
 		} catch (Exception ex) {
 			throw new MessageException("Initialize MessageHub Failed.", ex);
@@ -452,14 +506,14 @@ public final class AgentNode extends Thread {
 	 * @return
 	 */
 	public DeviceCapacity checkCondition(String testId, DeviceRequirement requirements) {
-		if(testId == null)
+		if (testId == null)
 			return null;
-		if(requirements == null)
+		if (requirements == null)
 			requirements = new DeviceRequirement();
 		DeviceCapacity capacity = new DeviceCapacity(testId, requirements);
 		Collection<Device> devices = dm.listDevices();
 		Device mainRequire = requirements.getMain();
-		if(mainRequire == null)
+		if (mainRequire == null)
 			mainRequire = Device.createRequirement(null);
 		Device refRequire = requirements.getRef();
 		int avail = 0;
@@ -548,6 +602,7 @@ public final class AgentNode extends Thread {
 	@Override
 	public void run() {
 		while (isRunning) {
+			log.info("loop checking hang tests...");
 			try {
 				if (this.getConfig(Constants.AGENT_CONFIG_CHECK_HANG_TEST, Boolean.class, false))
 					releaseHangTests();
@@ -556,30 +611,31 @@ public final class AgentNode extends Thread {
 				// Boolean.class, false ) )
 				// releaseHangDevices();
 				TimeUnit.SECONDS.sleep(60);
-			} catch (InterruptedException e) {
-				log.error("AgentNode have got a interrupt.", e);
+			} catch (Throwable e) {
+				log.error("AgentNode have got a exception.", e);
 			}
 		}
 	}
 
-//	public void releaseDevices(Collection<Device> devices) {
-//		if (devices != null) {
-//			for (Device d : devices) {
-//				releaseDevice(d);
-//			}
-//		}
-//	}
+	// public void releaseDevices(Collection<Device> devices) {
+	// if (devices != null) {
+	// for (Device d : devices) {
+	// releaseDevice(d);
+	// }
+	// }
+	// }
 
-//	public void releaseDevice(Device device) {
-//		if (device != null) {
-//			device = dm.getDeviceBy(Constants.DEVICE_SN, device.getAttribute(Constants.DEVICE_SN));
-//			device.setRole(Device.ROLE_MAIN);
-//			device.setState(Device.DEVICE_FREE);
-//			device.setTaskStatus("");
-//			device.setPreState(Device.DEVICE_FREE);
-//			log.info("Releasing device:" + device.getId());
-//		}
-//	}
+	// public void releaseDevice(Device device) {
+	// if (device != null) {
+	// device = dm.getDeviceBy(Constants.DEVICE_SN,
+	// device.getAttribute(Constants.DEVICE_SN));
+	// device.setRole(Device.ROLE_MAIN);
+	// device.setState(Device.DEVICE_FREE);
+	// device.setTaskStatus("");
+	// device.setPreState(Device.DEVICE_FREE);
+	// log.info("Releasing device:" + device.getId());
+	// }
+	// }
 
 	/**
 	 * Check and Release tasks which didn't start and exceed the maximum
@@ -587,17 +643,34 @@ public final class AgentNode extends Thread {
 	 */
 	private void releaseHangTests() {
 		long curr = System.currentTimeMillis();
-		for (Test t : this.reservedTests.keySet()) {
-			long cr = this.reservedTests.get(t);
-			long timeout = getConfig(Constants.AGENT_CONFIG_HANG_TEST_TIMEOUT, Long.class, Constants.ONE_MINUTE * 3);
-			if ((curr - cr) > timeout) {
-				log.warn("Test["+t.getId()+" has reached the *HANG Test* criteria"+ CommonUtils.convert(timeout)+"], should be cancelled");
-				int result = this.cancelTest(t.getId(),
-						"This test has reached the *HANG Test* criteria[" + CommonUtils.convert(timeout)
-								+ "], cancelled.");
-				log.info("Cancel Test result:" + result+".Release test[" + t.getId() + "] , because it has been waiting over "
-						+ CommonUtils.convert(curr - cr));
+		long timeout = getConfig(Constants.AGENT_CONFIG_HANG_TEST_TIMEOUT, Long.class, Constants.ONE_MINUTE * 10);
+		try {
+			for (Test t : this.reservedTests.keySet()) {
+				long cr = this.reservedTests.get(t);
+				if ((curr - cr) > timeout) {
+					log.warn("Reserved Test[" + t.getTaskID() + ":::" + t.getId() + " has reached the *HANG Test* criteria" + CommonUtils.convert(timeout) + "], should be cancelled");
+					int result = this.cancelTest(t.getId(), "This test has reached the *HANG Test* criteria[" + CommonUtils.convert(timeout) + "], cancelled.");
+					log.info("Cancel Test result:" + result + ".Release Reserved test[" + t.getTaskID() + Constants.TASK_TEST_SPLITER + t.getId() + "] , because it has been waiting over "
+							+ CommonUtils.convert(curr - cr));
+				}
 			}
+		}catch(Throwable t1) {
+			log.error("Catch Exception when checking hang reserve test.", t1);
+		}
+		
+		try {
+			for (Test t : this.runningTests.keySet()) {
+				TestExecutor te = this.runningTests.get(t);
+				long cr = te.getStartTime();
+				if ((curr - cr) > te.getTimeout()) {
+					log.warn("Running Test[" + t.getTaskID() + ":::" + t.getId() + " has reached the *HANG Test* criteria" + CommonUtils.convert(te.getTimeout()) + "], should be cancelled");
+					int result = this.cancelTest(t.getId(), "This test has reached the *HANG Test* criteria[" + CommonUtils.convert(te.getTimeout()) + "], cancelled.");
+					log.info("Cancel Test result:" + result + ".Release Running test[" + t.getTaskID() + Constants.TASK_TEST_SPLITER + t.getId() + "] , because it has been waiting over "
+							+ CommonUtils.convert(curr - cr));
+				}
+			}
+		}catch(Throwable t2) {
+			log.error("Catch Exception when checking hang running test.", t2);
 		}
 
 	}
@@ -609,45 +682,30 @@ public final class AgentNode extends Thread {
 	 * @param task
 	 * @return
 	 */
-	/*public Collection<Device> reserveDevices(Test test, DeviceRequirement requirements) {
-		List<Device> devices = new ArrayList<Device>(dm.listDevices());
-		Collections.shuffle(devices);
-		Collection<Device> candidates = new ArrayList<Device>();
-		Device require = requirements.getMain();
-		for (Device dut : devices) {
-			if (require.match(dut) && !candidates.contains(dut) && dut.getState() == Device.DEVICE_FREE) {
-				if(!dut.isConnected()) {
-					Device d = dm.getDeviceBy(Constants.DEVICE_ID, dut.getId());
-					d.setState(Device.DEVICE_LOST_TEMP);
-					continue;
-				}
-				dut.setRole(Device.ROLE_MAIN);
-				dut.setState(Device.DEVICE_RESERVED);
-				dut.setTaskStatus(test.getTaskID()+Constants.TASK_TEST_SPLITER+test.getId());
-				candidates.add(dut);
-				break;
-			}
-		}
-
-		if (candidates.isEmpty())
-			return null;
-
-		Device requireRef = requirements.getRef();
-		if (requireRef != null) {
-			for (Device dut : devices) {
-				if (requireRef.match(dut) && !candidates.contains(dut) && dut.getState() == Device.DEVICE_FREE) {
-					dut.setRole(Device.ROLE_REF);
-					dut.setState(Device.DEVICE_RESERVED);
-					dut.setTaskStatus(test.getId());
-					candidates.add(dut);
-					break;
-				}
-			}
-			if (candidates.size() < 2)
-				return null;
-		}
-		return candidates;
-	}*/
+	/*
+	 * public Collection<Device> reserveDevices(Test test, DeviceRequirement
+	 * requirements) { List<Device> devices = new
+	 * ArrayList<Device>(dm.listDevices()); Collections.shuffle(devices);
+	 * Collection<Device> candidates = new ArrayList<Device>(); Device require =
+	 * requirements.getMain(); for (Device dut : devices) { if
+	 * (require.match(dut) && !candidates.contains(dut) && dut.getState() ==
+	 * Device.DEVICE_FREE) { if(!dut.isConnected()) { Device d =
+	 * dm.getDeviceBy(Constants.DEVICE_ID, dut.getId());
+	 * d.setState(Device.DEVICE_LOST_TEMP); continue; }
+	 * dut.setRole(Device.ROLE_MAIN); dut.setState(Device.DEVICE_RESERVED);
+	 * dut.setTaskStatus
+	 * (test.getTaskID()+Constants.TASK_TEST_SPLITER+test.getId());
+	 * candidates.add(dut); break; } }
+	 * 
+	 * if (candidates.isEmpty()) return null;
+	 * 
+	 * Device requireRef = requirements.getRef(); if (requireRef != null) { for
+	 * (Device dut : devices) { if (requireRef.match(dut) &&
+	 * !candidates.contains(dut) && dut.getState() == Device.DEVICE_FREE) {
+	 * dut.setRole(Device.ROLE_REF); dut.setState(Device.DEVICE_RESERVED);
+	 * dut.setTaskStatus(test.getId()); candidates.add(dut); break; } } if
+	 * (candidates.size() < 2) return null; } return candidates; }
+	 */
 
 	/**
 	 * Reserve the task in this agent node, actually including task reserve and
@@ -661,31 +719,56 @@ public final class AgentNode extends Thread {
 			log.error("Received an NUll test request");
 			return false;
 		} else {
-			if(requirement == null)
+			boolean anyDeviceFree = false;
+			for (Device d : dm.listDevices()) {
+				if (d.getState() == Device.DEVICE_FREE) {
+					anyDeviceFree = false;
+					break;
+				}
+			}
+			if (anyDeviceFree) {
+				log.info("No devices free now, just return");
+				return false;
+			}
+			long current = System.currentTimeMillis();
+			if (requirement == null)
 				requirement = new DeviceRequirement();
 			if (!reservedTests.keySet().contains(test)) {
+				if (reservedDevices.containsKey(test)) {
+					Collection<Device> dss = reservedDevices.get(test);
+					log.warn("This device have already been reserved before. the device been reserved is :" + CommonUtils.toJson(dss));
+					reservedTests.put(test, current);
+					test.setPhase(Phase.PREPARING);
+					return true;
+				}
 				Collection<Device> devices = dm.reserveDevices(test, requirement);
 				if (null != devices) {
-					long current = System.currentTimeMillis();
 					reservedTests.put(test, current);
-					if(reservedDevices.containsKey(test)) {
-						Collection<Device> ds = reservedDevices.remove(test);
-						if(ds != null && !ds.isEmpty()) {
-							log.info("Begin to release devices for test:" + test.getId()+"("+test.getTaskID()+") because test have already been reserved before.");
-							dm.releaseDevices(ds);
-						}
-					}
+					/*
+					 * if(reservedDevices.containsKey(test)) {
+					 * Collection<Device> ds = reservedDevices.remove(test);
+					 * if(ds != null && !ds.isEmpty()) {
+					 * log.info("Begin to release devices for test:" +
+					 * test.getId()+"("+test.getTaskID()+
+					 * ") because test have already been reserved before. the previous task was:"
+					 * ); dm.releaseDevices(ds); } }
+					 */
 					this.reservedDevices.put(test, devices);
 					test.setPhase(Phase.PREPARING);
-					log.info("Reserve Devices for Test success! Test:" + test);
+					StringBuilder sb = new StringBuilder();
+					if(devices != null) {
+						for(Device d: devices) {
+							sb.append(d.getId()).append(",");
+						}
+					}
+					log.info("Reserve Devices for Test success! Test:" + test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + ",device is:" + sb.toString());
 					return true;
 				} else {
-					log.warn("Can't reserve Devices for Test:" + test + ", current status is :"
-							+ CommonUtils.toJson(this.dm.listDevices()));
+					log.warn("Can't reserve Devices for Test:" + test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId()); //+ ", current status is :" + CommonUtils.toJson(this.dm.listDevices())
 					return false;
 				}
 			} else {
-				log.warn("Duplicated reserved Test:" + test);
+				log.warn("Duplicated reserved Test:" + test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + " which have been reserved @:" + CommonUtils.parseTimestamp(reservedTests.get(test)));
 				return true;
 			}
 
@@ -718,6 +801,24 @@ public final class AgentNode extends Thread {
 		return false;
 	}
 
+	public Test getRunningTestById(String testId) {
+		for(Test t : this.runningTests.keySet()) {
+			if(t.getId().equals(testId)) {
+				return t;
+			}
+		}
+		return null;
+	}
+	
+	public Test getReservedTestById(String testId) {
+		for(Test t : this.reservedTests.keySet()) {
+			if(t.getId().equals(testId)) {
+				return t;
+			}
+		}
+		return null;
+	}
+	
 	/**
 	 * Start assigned task, created TaskExecutor, and encapsulate into a
 	 * FutureTask.
@@ -726,8 +827,7 @@ public final class AgentNode extends Thread {
 	 */
 	public void startTest(String testId, String target) {
 		if (isTestRunning(testId)) {
-			log.warn("Assigned test[" + testId + "] request by " + target
-					+ " have already been started. No need to restart.");
+			log.warn("Assigned test[" + testId + "] request by " + target + " have already been started. No need to restart.");
 			return;
 		}
 		log.info("Test:[" + testId + "] is going to start...");
@@ -746,9 +846,9 @@ public final class AgentNode extends Thread {
 		reservedTests.remove(test);
 		Pipe pipe = this.hub.getPipe(Constants.HUB_TEST_STATUS);
 		OutputStream tracker = null;
-		if(test.isSendOutput()) {
-			tracker = new BufferedMessageOutputStream(pipe.getParentBroker().getSession(),
-				pipe.getProducer(), Constants.MSG_HEAD_TESTID, test.getId(), LogUtils.getLogger("Exec_" + test.getId()));
+		if (test.isSendOutput()) {
+			tracker = new BufferedMessageOutputStream(pipe.getParentBroker().getSession(), pipe.getProducer(), Constants.MSG_HEAD_TESTID, test.getId(),
+					LogUtils.getLogger("Exec_"+test.getTaskID()+"_" + test.getId()));
 		}
 		Collection<Device> rDevices = reservedDevices.get(test);
 		TestExecutor te = new TestExecutor(test, this, rDevices, tracker, test.getTimeout(), target);
@@ -756,7 +856,7 @@ public final class AgentNode extends Thread {
 		FutureTask<Boolean> future = new FutureTask<Boolean>(te, null);
 		getPool().execute(future);
 		test.setPhase(Phase.STARTED);
-		log.info("Test:[" + test + "] is started.");
+		log.info("Test:[" +test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + "] is started.");
 	}
 
 	/**
@@ -798,12 +898,12 @@ public final class AgentNode extends Thread {
 	 */
 	public void finishTest(TestExecutor te) {
 		Test test = te.getTest();
-		log.info("Test[" + te.getTest().getId() + "] finished executing with Phase:" + test.getPhase());
+		log.info("Test[" + test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + "] finished executing with Phase:" + test.getPhase());
 		try {
 			// first release devices.
-			log.info("Releasing devices for test[" + test.getId() + "]");
+			log.info("Releasing devices for test[" + test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + "]");
 			Collection<Device> devices = te.getDevices();
-			log.info("Begin to release devices for test:" + test.getId()+"("+test.getTaskID()+") because test was finished.");
+			log.info("Begin to release devices for test:" + test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + " because test was finished.");
 			dm.releaseDevices(devices);
 			devices.clear();
 			this.reservedDevices.remove(test);
@@ -826,32 +926,32 @@ public final class AgentNode extends Thread {
 			setProperty(m, Constants.MSG_HEAD_TESTID, te.getTest().getId());
 			setProperty(m, Constants.MSG_HEAD_TRANSACTION, Constants.MSG_TEST_FINISHED);
 
-			//final File resultFile = new File(te.getWorkspace(), te.getTest().getResultsFilename());
+			// final File resultFile = new File(te.getWorkspace(),
+			// te.getTest().getResultsFilename());
 			List<File> resultFiles = new ArrayList<File>();
-			Map<String,Boolean> missingFiles = new HashMap<String,Boolean>();
+			Map<String, Boolean> missingFiles = new HashMap<String, Boolean>();
 			boolean isSucc = validateResultFiles(te, resultFiles, missingFiles);
-			if(!isSucc)
+			if (!isSucc)
 				log.info("Not All mandatory result files available.");
-			if(!missingFiles.isEmpty()) {
-				log.warn("Test["+test.getId()+"] missing some result files:" + CommonUtils.toJson(missingFiles));
+			if (!missingFiles.isEmpty()) {
+				log.warn("Test[" + test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + "] missing some result files:" + CommonUtils.toJson(missingFiles));
 			}
-			
-			if(!resultFiles.isEmpty()) {
-				log.info("Test[" + test.getId() + "] have been finished, prepare for sending results.");
-				//log.info("Result File exist with length:" + resultFile.length());
-				FileTransferTask ftt = new FileTransferTask(Constants.MSG_TARGET_AGENT + CommonUtils.getHostName(),
-						te.getClientTarget(), te.getTest().getTaskID(), te.getTest().getId(),resultFiles);
+
+			if (!resultFiles.isEmpty()) {
+				log.info("Test[" + test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + "] have been finished, prepare for sending results.");
+				// log.info("Result File exist with length:" +
+				// resultFile.length());
+				FileTransferTask ftt = new FileTransferTask(Constants.MSG_TARGET_AGENT + CommonUtils.getHostName(), te.getClientTarget(), te.getTest()
+						.getTaskID(), te.getTest().getId(), resultFiles);
 				fts.sendTo(ftt);
-				log.info("Begin to send test result back to test client.TestId:" + ftt.getTestId() + ", FtTaskId["
-						+ ftt.getId() + "]");
+				log.info("Begin to send test result back to test client.TestId:" + ftt.getTestId() + ", FtTaskId[" + ftt.getId() + "]");
 			} else {
-				log.error("Test[" + test.getId() + "] failed because some of mandatory result files missing.");
+				log.error("Test[" + test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + "] failed because some of mandatory result files missing.");
 				setProperty(m, Constants.MSG_HEAD_TEST_RESULT, Constants.MSG_TEST_FAIL);
 				if (test.getPhase() == Phase.FINISHED)
 					setProperty(m, Constants.MSG_HEAD_ERROR, "ResultFiles: " + CommonUtils.toJson(missingFiles) + " didn't exist");
 				else
-					setProperty(m, Constants.MSG_HEAD_ERROR, te.getFailureInfo() + ", and ResultFiles: " + CommonUtils.toJson(missingFiles)
-							+ " didn't exist");
+					setProperty(m, Constants.MSG_HEAD_ERROR, te.getFailureInfo() + ", and ResultFiles: " + CommonUtils.toJson(missingFiles) + " didn't exist");
 				taskPipe.getProducer().send(m);
 				testStatusPipe.getProducer().send(m);
 			}
@@ -861,20 +961,25 @@ public final class AgentNode extends Thread {
 		}
 	}
 
-	private boolean validateResultFiles(TestExecutor te, List<File> resultFiles, Map<String,Boolean> missingFiles) {
+	private boolean validateResultFiles(TestExecutor te, List<File> resultFiles, Map<String, Boolean> missingFiles) {
 		Test t = te.getTest();
-		File f = null;
 		boolean result = true;
 		boolean isMandatory = false;
-		for(String resultFile : t.getResultFiles().keySet()) {
-			f = new File(te.getWorkspace(), resultFile);
-			if(!f.exists()) {
-				isMandatory = t.getResultFiles().get(resultFile);
+		for (String resultFile : t.getResultFiles().keySet()) {
+			isMandatory = t.getResultFiles().get(resultFile);
+			FileFilter fileFilter = new WildcardFileFilter(resultFile);
+			File[] fs = te.getWorkspace().listFiles(fileFilter);
+			if (fs != null && fs.length > 0) {
+				for (File f : fs) {
+					if (!resultFiles.contains(f))
+						resultFiles.add(f);
+				}
+			} else {
 				missingFiles.put(resultFile, isMandatory);
-				if(isMandatory)
+				if (isMandatory)
 					result = false;
-			}else
-				resultFiles.add(f);
+			}
+
 		}
 		return result;
 	}
@@ -901,7 +1006,7 @@ public final class AgentNode extends Thread {
 	 */
 	public int cancelTest(String testId, String reason) {
 		Test test = null;
-		log.info("Start to cancel a test:" + testId + " for reason:" + reason);
+		log.info("Start to cancel a test:{} for reason:{}", testId, reason);
 
 		for (Test t : runningTests.keySet()) {
 			if (t.getId().equals(testId)) {
@@ -924,8 +1029,8 @@ public final class AgentNode extends Thread {
 			test.setPhase(Phase.STOPPED);
 			// release all the devices first.
 			Collection<Device> devices = this.reservedDevices.remove(test);
-			log.info("Begin to release devices for test:" + test.getId()+"("+test.getTaskID()+") because test was cancelled.");
-			if(devices != null && !devices.isEmpty()) {
+			log.info("Begin to release devices for test:{}:::{}  because test was cancelled.", test.getTaskID(), test.getId());
+			if (devices != null && !devices.isEmpty()) {
 				dm.releaseDevices(devices);
 				devices.clear();
 			}
@@ -941,8 +1046,7 @@ public final class AgentNode extends Thread {
 				reservedTests.remove(test);
 			}
 		} else {
-			log.warn("The Test[" + test
-					+ "] didn't in this agent node, maybe it have been finished or not running on this node.");
+			log.warn("The Test["  + testId + "] didn't in this agent node, maybe it have been finished or not running on this node.");
 			result = Constants.TASK_CANCEL_NOTFOUND;
 		}
 		return result;
@@ -998,5 +1102,49 @@ public final class AgentNode extends Thread {
 			e.printStackTrace();
 			System.exit(-1);
 		}
+	}
+	
+	static class ConfigFileWatcher extends FileWatchService {
+		private AgentNode agent;
+		public ConfigFileWatcher(AgentNode node,Path dir) throws IOException {
+			super(dir, false);
+			agent = node;
+		}
+		
+		@Override
+		public void handleEvent(WatchEvent<Path> event, Path path) {
+			Kind<Path> kind = event.kind();
+			if (path.getFileName().toString().toLowerCase().equals(Constants.AGENT_CONFIG_FILE)) {
+				if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
+					try {
+						config = new Properties();
+						config.load(CommonUtils.loadResources(Constants.AGENT_CONFIG_FILE, true));
+						Map<String, Object> defaultAttrs = CommonUtils.fromJson(agent.getConfig(Constants.AGENT_CONFIG_DEVICE_DEFAULT_ATTRS, String.class, "{}"),
+								new TypeToken<Map<String, Object>>() {
+								}.getType());
+						if (defaultAttrs != null && !defaultAttrs.isEmpty()) {
+							agent.getDm().getDefaultAttributes().clear();
+							agent.getDm().getDefaultAttributes().putAll(defaultAttrs);
+						}
+						long scanInterval = CommonUtils.parseLong((String) getConfig(Constants.AGENT_CONFIG_DEVICE_DETECT_INTERVAL), Constants.ONE_MINUTE);
+						if(agent.getIosDetector() != null) {
+							agent.getIosDetector().setWaitingSchedule(scanInterval);
+						}else if(agent.getAndroidDetector() != null) {
+							agent.getAndroidDetector().setWaitingSchedule(scanInterval);
+						}
+						if(agent.getMqNotifier() != null) {
+							agent.getMqNotifier().setCharset(config.getProperty(Constants.AGENT_CONFIG_NOTIFICATION_CHARSET,"UTF-8".intern()));
+							agent.getMqNotifier().setEnable(CommonUtils.parseBoolean(config.getProperty(Constants.AGENT_CONFIG_ENABLE_NOTIFICATION, "false"), false));
+							agent.getMqNotifier().setNotifyUrl(config.getProperty(Constants.AGENT_CONFIG_NOTIFICATION_URL,""));
+							agent.getMqNotifier().setReceivers(config.getProperty(Constants.AGENT_CONFIG_NOTIFICATION_RECEIVERS,""));
+						}
+						agent.getFts().setSupportShareZone(CommonUtils.parseBoolean((String) getConfig("support_share_zone")));
+					} catch (Exception ex) {
+						log.error("Load Agent Config File[ " + Constants.AGENT_CONFIG_FILE + " ] failed.", ex);
+					}
+				}
+			}
+		}
+		
 	}
 }

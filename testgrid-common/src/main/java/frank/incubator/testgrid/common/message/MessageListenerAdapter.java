@@ -60,16 +60,15 @@ public class MessageListenerAdapter implements MessageListener {
 		this(loggerName, session, tracker, null, (MessageFilter) null);
 	}
 
-	public MessageListenerAdapter(String loggerName, Session session, OutputStream tracker, MessageListener delegate,
-			MessageFilter... filters) {
+	public MessageListenerAdapter(String loggerName, Session session, OutputStream tracker, MessageListener delegate, MessageFilter... filters) {
 		this(false, loggerName, session, tracker, delegate, filters);
 	}
-	
+
 	public MessageListenerAdapter(boolean disableLogger, String loggerName, Session session, OutputStream tracker, MessageListener delegate,
 			MessageFilter... filters) {
 		this.session = session;
 		this.delegate = delegate;
-		if(!disableLogger) {
+		if (!disableLogger) {
 			if (loggerName != null)
 				log = LogUtils.get(loggerName, tracker);
 			else
@@ -80,7 +79,11 @@ public class MessageListenerAdapter implements MessageListener {
 				if (f != null)
 					this.addFilter(f);
 	}
-	
+
+	public List<MessageFilter> getFilters() {
+		return filters;
+	}
+
 	public void addFilter(MessageFilter filter) {
 		if (filter != null)
 			this.filters.add(filter);
@@ -103,8 +106,7 @@ public class MessageListenerAdapter implements MessageListener {
 				try {
 					filter.filter(message);
 				} catch (MessageException e) {
-					log.error("Filter message met exception. filter=" + filter.getClass().getName() + " ,Message="
-							+ message, e);
+					log.error("Filter message met exception. filter=" + filter.getClass().getName() + " ,Message=" + message, e);
 				}
 			}
 
@@ -125,15 +127,15 @@ public class MessageListenerAdapter implements MessageListener {
 	}
 
 	protected void handleMessage(Message message) {
-		if(message instanceof TextMessage) {
+		if (message instanceof TextMessage) {
 			String text = null;
-			try{
-				text = ((TextMessage)message).getText();
-			}catch(Exception ex) {
+			try {
+				text = ((TextMessage) message).getText();
+			} catch (Exception ex) {
 				log.error("Get Text from Text Message failed. message:" + MessageHub.printMessage(message), ex);
 			}
 			log.debug("received message " + text + " by handler:" + this.getClass().getName());
-		}else {
+		} else {
 			log.debug("received message " + MessageHub.printMessage(message) + " by handler:" + this.getClass().getName());
 		}
 	}

@@ -50,14 +50,18 @@ public class TaskSubscriber extends MessageListenerAdapter {
 		try {
 			sendResponse(test, from, capacity, false);
 		} catch (MessageException e) {
-			log.error("Send accpet message to " + from + " for test:" + test + " failed", e);
+			log.error("Send accept message to " + from + " for test:"+ test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + " failed", e);
 		}
 	}
 
-	public void sendResponse(Test test, String clientHost, DeviceCapacity capacity, boolean withDelay)
-			throws MessageException {
-		log.info("Test:" + test + " from " + clientHost
-				+ " could be executed here, and some of them may need wait for device free.");
+	public void sendResponse(Test test, String clientHost, DeviceCapacity capacity, boolean withDelay) throws MessageException {
+		log.info("Test:"
+				+ test.getTaskID()+ Constants.TASK_TEST_SPLITER
+				+ test.getId()
+				+ " from "
+				+ clientHost
+				+ " could be executed here, "
+				+ ((capacity.getAvailable() > 0) ? capacity.getAvailable() + " sets of devices could be execute here" : "but you need to wait for device free."));
 		try {
 			Message reply = pipe.createMessage(Constants.MSG_TARGET_AGENT);
 			setProperty(reply, Constants.MSG_HEAD_TARGET, clientHost);
@@ -84,24 +88,32 @@ public class TaskSubscriber extends MessageListenerAdapter {
 			log.info("Got task requirement.");
 			String testStr = getProperty(message, Constants.MSG_HEAD_TEST, "");
 			if (testStr != null) {
-				//Task task = CommonUtils.fromJson(taskStr, Task.class);
+				// Task task = CommonUtils.fromJson(taskStr, Task.class);
 				Test test = CommonUtils.fromJson(testStr, Test.class);
 				test.deleteObservers();
-				//int requireDeviceSets = task.getTestsuite().getTests().size();
+				String testId = test.getId();
+				if(agent.getRunningTestById(testId) != null || agent.getReservedTestById(testId) != null) {
+					log.info("Current Agent have already reserved the test:{}:::{}", test.getTaskID(), testId);
+					return;
+				}
+				// int requireDeviceSets =
+				// task.getTestsuite().getTests().size();
 				String clientHost = getProperty(message, Constants.MSG_HEAD_FROM, "Unknown");
-				log.info("Task:" + test.getTaskID() + ", Test:" + test.getId()+ " from:" + clientHost + ", requirement:" + test.getRequirements());
+				log.info("Test:" + test.getTaskID() + Constants.TASK_TEST_SPLITER + test.getId() + " from:" + clientHost + ", requirement:" + test.getRequirements());
 				DeviceCapacity capability = agent.checkCondition(test.getId(), test.getRequirements());
 				if (capability.getAvailable() > 0 || capability.getNeedWait() > 0) {
 					sendResponse(test, clientHost, capability, true);
 					/*
-					// if require devices more than current node can provided
-					// and still have busy device could be provided to task,
-					// monitor these devices and when they free, notify the
-					// client.
-					if (requireDeviceSets > capability.getAvailable() && capability.getNeedWait() > 0)
-						deviceBusyEventBus.post(new Object[] { task, clientHost });*/
+					 * // if require devices more than current node can provided
+					 * // and still have busy device could be provided to task,
+					 * // monitor these devices and when they free, notify the
+					 * // client. if (requireDeviceSets >
+					 * capability.getAvailable() && capability.getNeedWait() >
+					 * 0) deviceBusyEventBus.post(new Object[] { task,
+					 * clientHost });
+					 */
 				} else {
-					log.info("I Didn't have capability to execute Test:" + test);
+					log.info("I Didn't have capability to execute Test:{}:::{}", test.getTaskID(),test.getId());
 				}
 			} else {
 				log.warn("Incoming Message with Null Task. Message:" + CommonUtils.toJson(message));

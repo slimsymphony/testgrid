@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.Collection;
 
 import frank.incubator.testgrid.common.CommonUtils;
+import frank.incubator.testgrid.common.Constants;
 import frank.incubator.testgrid.common.model.BaseObject;
 
 /**
@@ -27,10 +28,9 @@ public class FileTransferTask extends BaseObject implements Comparable<FileTrans
 		this(null, from, targetUri, taskId, testId, files);
 	}
 
-	public FileTransferTask(String id, String from, String targetUri, String taskId, String testId,
-			Collection<File> files) {
+	public FileTransferTask(String id, String from, String targetUri, String taskId, String testId, Collection<File> files) {
 		if (id == null || id.trim().isEmpty())
-			this.id = "FT_" + testId + "_" + CommonUtils.generateToken(5);
+			this.id = "FT_" + taskId + "_" + testId + "_" + CommonUtils.generateToken(5);
 		else
 			this.id = id;
 		this.from = from;
