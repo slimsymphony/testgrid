@@ -9,7 +9,7 @@ public class Notifier {
 	private boolean enable;
 	private String receivers;
 	private long lastSendTime = 0;
-	private String notifyUrl = "http://atc.alipay.net/sendspecificnotification.json";
+	private String notifyUrl = "http://127.0.0.1/sendspecificnotification.json";
 	private String charset = "GBK";
 
 	public boolean isEnable() {

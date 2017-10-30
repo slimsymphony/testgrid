@@ -46,7 +46,7 @@ public class TestClient {
 			IOUtils.copy(in, sw);
 			bds = CommonUtils.fromJson(sw.toString(), new TypeToken<BrokerDescriptor[]>() {
 			}.getType());
-			bds = null;// ,{'priority':1,'id':'FTP','properties':{'user':'ftpuser','pwd':'ali88','host':'slm.alipay.net'}}
+			bds = null;
 			FileTransferDescriptor descriptor = CommonUtils.fromJson("{'channels':[{'priority':0,'id':'SOCKET'}]}", FileTransferDescriptor.class);
 			task.setSendOutput(false);
 			// TaskClient client = new TaskClient( null, task,
@@ -155,7 +155,7 @@ public class TestClient {
 		test.setDisconnectionTimeout(Constants.ONE_HOUR * 72);
 		test.setExecutorApplication("");
 		test.setExecutorScript("monkey.sh");
-		test.addExecutorEnvParam("PKG_UT", "alipay.ipa");
+		test.addExecutorEnvParam("PKG_UT", "test.ipa");
 		test.addExecutorEnvParam("TIME", "5");
 		test.setExecutorParameters("");
 		File sh = new File("client_workspace", "monkey.sh");
@@ -196,7 +196,7 @@ public class TestClient {
 	private static Test createTest3() {
 		Test test = new Test();
 		test.setPreScript("cmd /c cd");
-		test.setPostScript("cmd /c %ADB_HOME%/adb -s %DEVICE_MAIN_SN% uninstall com.eg.android.AlipayGphone");
+		test.setPostScript("cmd /c %ADB_HOME%/adb -s %DEVICE_MAIN_SN% uninstall com.android.testapp");
 		test.setDisconnectionTimeout(Constants.ONE_HOUR);
 		test.setExecutorApplication("python");
 		test.setExecutorScript("execute.py");

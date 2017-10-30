@@ -8,9 +8,6 @@ import java.util.List;
 /**
  * DuplicatedOutputStream can be set multiple outputStreams, once incoming data
  * been written, all the outputStreams would be written same bytes.
- * 
- * @author peiyang.wy
- *
  */
 public class DuplicatedOutputStream extends OutputStream {
 

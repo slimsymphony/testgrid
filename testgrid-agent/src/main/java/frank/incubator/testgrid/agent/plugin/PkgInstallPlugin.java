@@ -16,9 +16,6 @@ import frank.incubator.testgrid.common.model.Device;
 
 /**
  * PLugin to response application package install request.
- * 
- * @author peiyang.wy
- *
  */
 public class PkgInstallPlugin extends AbstractAgentPlugin<Void> {
 

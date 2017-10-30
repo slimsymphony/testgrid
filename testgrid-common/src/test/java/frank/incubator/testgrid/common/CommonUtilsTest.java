@@ -53,7 +53,6 @@ public class CommonUtilsTest {
 		// testTimeoutExec();
 		// testBlocking();
 		// defaultCharset();
-		// float f = CommonUtils.checkLatency("slm.alipay.net");
 		// System.out.println(f);
 		// f = CommonUtils.checkLatency("10.62.0.76");
 		// System.out.println(f);
@@ -113,7 +112,6 @@ public class CommonUtilsTest {
 		env.put("DEVICE_MAIN_SN", "0224111208e4c60e");
 		env.put("ADB_HOME", "D:\\Android\\android-sdk\\platform-tools");
 		// %ADB_HOME%/adb -s %DEVICE_MAIN_SN% uninstall
-		// com.eg.android.AlipayGphone
 		CommonUtils.execBlocking("cmd.exe /c echo %ADB_HOME%", env, sb, 30000);
 		System.out.println("execBlocking:" + sb.toString());
 		try {

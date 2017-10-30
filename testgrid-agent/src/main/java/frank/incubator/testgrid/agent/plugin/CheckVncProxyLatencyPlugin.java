@@ -17,17 +17,13 @@ import frank.incubator.testgrid.common.log.LogUtils;
 import frank.incubator.testgrid.common.model.Device;
 
 /**
- * Plugin to check the latency from VncProxy to Devices and send back to
- * Solomon.
- * 
- * @author peiyang.wy
- *
+ * Plugin to check the latency from VncProxy to Devices and send back to control center. 
  */
 public class CheckVncProxyLatencyPlugin extends AbstractAgentPlugin<Void> {
 	private final Logger log = LogUtils.getLogger("CheckVncProxyLatencyPlugin");
 	private Map<String, Map<String, Float>> latency = new ConcurrentHashMap<String, Map<String, Float>>();
-	private String fetchVncProxyUrl = "http://slm.alipay.net/getCacheInfo.json?type=VNCPROXY"; //
-	private String resultPostUrl = "http://slm.alipay.net/updateCacheInfo.json"; //
+	private String fetchVncProxyUrl = "http://127.0.0.1/getCacheInfo.json?type=VNCPROXY"; //
+	private String resultPostUrl = "http://127.0.0.1/updateCacheInfo.json"; //
 
 	@Override
 	public Void call() throws Exception {

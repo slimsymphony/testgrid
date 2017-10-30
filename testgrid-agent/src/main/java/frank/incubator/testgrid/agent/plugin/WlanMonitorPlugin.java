@@ -16,8 +16,8 @@ import frank.incubator.testgrid.common.model.Device;
 
 public class WlanMonitorPlugin extends AbstractAgentPlugin<Collection<Device>> {
 	private final Logger log = LogUtils.getLogger("WlanMonitorPlugin");
-	public static String NOTIFICATION_URL = "http://atc.alipay.net/sendnotification.json";// "http://ali-80938n.hz.ali.com/sendnotification.json";//
-	public static String NOTIFY_USERS = "peiyang.wy";
+	public static String NOTIFICATION_URL = "http://127.0.0.1/sendnotification.json";
+	public static String NOTIFY_USERS = "";
 	private Map<Device, Long> suspectList = new ConcurrentHashMap<Device, Long>();
 	private Map<Device, Long> issueDeviceList = new ConcurrentHashMap<Device, Long>();
 	private long beginTime = System.currentTimeMillis();

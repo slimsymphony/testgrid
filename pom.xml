@@ -76,10 +76,4 @@
 			</plugins>
 		</pluginManagement>
 	</build>
-	<distributionManagement>
-		<snapshotRepository>
-			<id>mobile-snapshot</id>
-			<url>http://mvn.dev.alipay.net:8081/artifactory/content/repositories/mobile-snapshot</url>
-		</snapshotRepository>
-	</distributionManagement>
 </project>

@@ -26,14 +26,14 @@
 		'pluginName':'WlanMonitorPlugin',
 		'permissions':['ALLOCATE_DEVICE_INFO','FSIO_WORKSPACE','EXECUTE_SCHEDULED_OPERATION'],
 		'scheduleSecs': 120,
-		'attributes':{'notifyUsers':'peiyang.wy','notifyUrl':'http://atc.alipay.net/sendnotification.json','switchToMaintain':true,'sendNotification':true}
+		'attributes':{'notifyUsers':'','notifyUrl':'http://127.0.0.1/sendnotification.json','switchToMaintain':true,'sendNotification':true}
 	},
 	{
 		'className':'frank.incubator.testgrid.agent.plugin.CheckVncProxyLatencyPlugin',
 		'pluginName':'CheckVncProxyLatencyPlugin',
 		'permissions':['ALLOCATE_DEVICE_INFO','EXECUTE_SCHEDULED_OPERATION'],
 		'scheduleSecs': 120,
-		'attributes':{'fetchVncProxyUrl':'http://slm.alipay.net/getCacheInfo.json?type=VNCPROXY','resultPostUrl':'http://slm.alipay.net/updateCacheInfo.json'}
+		'attributes':{'fetchVncProxyUrl':'http://127.0.0.1/getCacheInfo.json?type=VNCPROXY','resultPostUrl':'http://127.0.0.1/updateCacheInfo.json'}
 	},
 	{
 		'className':'frank.incubator.testgrid.agent.plugin.PkgInstallPlugin',
